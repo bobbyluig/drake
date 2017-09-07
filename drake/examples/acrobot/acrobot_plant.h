@@ -116,26 +116,6 @@ class AcrobotPlant : public systems::LeafSystem<T> {
   const double m2l1lc2_ = m2_ * l1_ * lc2_;
 };
 
-/// Constructs the Acrobot with (only) encoder outputs.
-template <typename T>
-class AcrobotWEncoder : public systems::Diagram<T> {
- public:
-  explicit AcrobotWEncoder(bool acrobot_state_as_second_output = false);
-
-  const AcrobotPlant<T>* acrobot_plant() const { return acrobot_plant_; }
-
-  AcrobotStateVector<T>* get_mutable_acrobot_state(
-      systems::Context<T>* context) const;
-
- private:
-  AcrobotPlant<T>* acrobot_plant_{nullptr};
-};
-
-/// Constructs the LQR controller for stabilizing the upright fixed point using
-/// default LQR cost matrices which have been tested for this system.
-std::unique_ptr<systems::AffineSystem<double>> BalancingLQRController(
-    const AcrobotPlant<double>& acrobot);
-
 }  // namespace acrobot
 }  // namespace examples
 }  // namespace drake

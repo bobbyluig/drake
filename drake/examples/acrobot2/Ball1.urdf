@@ -7,7 +7,7 @@
 
   <link name="ball">
     <visual>
-      <origin xyz="0 0.15 -0.7" rpy="0 0 0"/>
+      <origin xyz="0.4 0.15 -0.5" rpy="0 0 0"/>
       <geometry>
         <sphere radius="0.2"/>
       </geometry>
@@ -16,7 +16,7 @@
       </material>
     </visual>
     <collision name="ball_collision">
-      <origin xyz="0 0.15 -0.7" rpy="0 0 0"/>
+      <origin xyz="0.4 0.15 -0.5" rpy="0 0 0"/>
       <geometry>
         <sphere radius="0.2"/>
       </geometry>

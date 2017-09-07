@@ -120,20 +120,30 @@ Vector2<double> AcrobotPlant::VectorC(const AcrobotStateVector<double>& x) const
     auto wT = pair.elementB->getWorldTransform();
     Vector3<double> originB;
     originB << wT(0, 3), wT(1, 3), wT(2, 3);
-    const double radius = (pointB - originB).norm();
+    const Vector3<double> n = pointB - originB;
+    const double radius = n.norm();
 
     // Obtain force vector.
     // Convert to 2D by only considering forces in the x-z plane.
     // Force is considered as an ideal spring compressed to pointA.
-    const Vector3<double> n = pointA - originB;
-    const Vector3<double> f
-        = 0.5 * k_ * pow(radius - n.norm(), 2) * n.normalized();
+    const double d = (pointA - originB).norm();
+    const Vector3<double> f = 0.5 * k_ * pow(radius - d, 2) * n.normalized();
 
     if (pair.elementA->get_body()->get_name() == "upper_link") {
       // Colliding with upper link.
       // Only need to compute torque effects on C(0).
-      double tau1 = (-pointA(2) * f(0)) - (-pointA(0) * f(2));
+      const double tau1 = (-pointA(2) * f(0)) - (-pointA(0) * f(2));
       C(0) += tau1;
+    } else if (pair.elementA->get_body()->get_name() == "lower_link") {
+      // Colliding with lower link.
+      // Need to compute torque effects on C(0) and C(1).
+      const double elbowX = l1_ * s1;
+      const double elbowZ = -(l1_ * cos(x.theta1()));
+      const double tau1 = (-pointA(2) * f(0)) - (-pointA(0) * f(2));
+      const double tau2 =
+          ((elbowZ - pointA(2)) * f(0)) - ((elbowX - pointA(0)) * f(2));
+      C(0) += tau1;
+      C(1) += tau2;
     }
 
     // std::cout << pair.elementA->get_body()->get_name() << std::endl;

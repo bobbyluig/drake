@@ -36,7 +36,7 @@ int do_main(int argc, char* argv[]) {
       multibody::joints::kFixed, tree.get());
 
   parsers::urdf::AddModelInstanceFromUrdfFileToWorld(
-      FindResourceOrThrow("drake/examples/acrobot2/Ball.urdf"),
+      FindResourceOrThrow("drake/examples/acrobot2/Ball1.urdf"),
       multibody::joints::kFixed, tree.get());
 
   systems::DiagramBuilder<double> builder;
@@ -53,7 +53,7 @@ int do_main(int argc, char* argv[]) {
 
   // Constant torque
   Vector2<double> tau;
-  tau << 0, 0;
+  tau << 0.0, 0.0;
   acrobot_context.FixInputPort(0, tau);
   
   // Set an initial condition that is sufficiently far from the downright fixed
@@ -61,14 +61,14 @@ int do_main(int argc, char* argv[]) {
   AcrobotStateVector<double>* x0 = dynamic_cast<AcrobotStateVector<double>*>(
       acrobot_context.get_mutable_continuous_state_vector());
   DRAKE_DEMAND(x0 != nullptr);
-  x0->set_theta1(1.0);
-  x0->set_theta2(1.0);
+  x0->set_theta1(0.5);
+  x0->set_theta2(0.5);
   x0->set_theta1dot(0.0);
   x0->set_theta2dot(0.0);
 
   simulator.set_target_realtime_rate(FLAGS_realtime_factor);
   simulator.Initialize();
-  simulator.StepTo(100);
+  simulator.StepTo(30);
   return 0;
 }
 
