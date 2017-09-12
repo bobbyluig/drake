@@ -23,7 +23,7 @@ using systems::RigidBodyPlant;
 using systems::DrakeVisualizer;
 using systems::DiagramBuilder;
 
-DEFINE_double(realtime_rate, 0.1, "Playback speed relative to real-time.");
+DEFINE_double(realtime_rate, 1, "Playback speed relative to real-time.");
 
 static const char* modelUrdfPath =
     "drake/examples/reconstruction/ten_segment_2D.urdf";
@@ -51,9 +51,11 @@ int do_main(int argc, char* argv[]) {
   auto context = simulator.get_mutable_context();
   auto& plant_context = diagram->GetMutableSubsystemContext(*plant, context);
 
-  VectorX<double> initial_state(6);
-  initial_state << 0.2, 0.2, 0.2, 0.0, 0.0, 0.0;
-  plant->set_state_vector(&plant_context, initial_state);
+  DRAKE_DEMAND(plant->get_num_positions() == plant->get_num_positions());
+  for (int i = 0; i < plant->get_num_positions(); i++) {
+    plant->set_position(&plant_context, i, 0.1);
+    plant->set_velocity(&plant_context, i, 0);
+  }
 
   simulator.set_target_realtime_rate(FLAGS_realtime_rate);
   simulator.Initialize();

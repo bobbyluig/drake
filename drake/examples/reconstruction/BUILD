@@ -3,12 +3,23 @@
 
 load(
     "//tools:drake.bzl",
+    "drake_cc_library",
     "drake_cc_binary",
 )
 load("//tools:install_data.bzl", "install_data")
 load("//tools:lint.bzl", "add_lint_tests")
 
 package(default_visibility = ["//visibility:public"])
+
+drake_cc_library(
+    name = "spring_controller_2D",
+    srcs = ["spring_controller_2D.cc"],
+    hdrs = ["spring_controller_2D.h"],
+    deps = [
+        "//drake/systems/framework:leaf_system",
+        "//drake/systems/framework:vector",
+    ],
+)
 
 drake_cc_binary(
     name = "reconstruct",
