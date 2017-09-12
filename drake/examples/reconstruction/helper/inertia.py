@@ -1,7 +1,7 @@
 def cylinder_tensor(m, r, h):
     """
-    Returns the non-zero inertial tensor values for a cylinder with based
-    centered at (0,0,0) extending downwards.
+    Returns the non-zero inertial tensor values for a cylinder about the center
+    of mass.
     :param m: The mass.
     :param r: The radius.
     :param h: The height.
