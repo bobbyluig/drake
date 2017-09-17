@@ -13,6 +13,8 @@
 #include "drake/systems/analysis/simulator.h"
 #include "drake/systems/framework/diagram.h"
 #include "drake/systems/framework/diagram_builder.h"
+#include "drake/systems/sensors/rgbd_camera.h"
+#include "drake/systems/sensors/image_to_lcm_image_array_t.h"
 
 namespace drake {
 namespace examples {
@@ -22,6 +24,8 @@ namespace {
 using systems::RigidBodyPlant;
 using systems::DrakeVisualizer;
 using systems::DiagramBuilder;
+using systems::sensors::RgbdCamera;
+using systems::sensors::ImageToLcmImageArrayT;
 
 DEFINE_double(realtime_rate, 1, "Playback speed relative to real-time.");
 
@@ -45,15 +49,25 @@ int do_main(int argc, char* argv[]) {
   const auto& tree = plant->get_rigid_body_tree();
   auto publisher = builder.AddSystem<DrakeVisualizer>(tree, &lcm);
   builder.Connect(plant->get_output_port(0), publisher->get_input_port(0));
-  auto diagram = builder.Build();
 
+  Eigen::Vector3d pos = Eigen::Vector3d(0, 2, -1);
+  Eigen::Vector3d rpy = Eigen::Vector3d(0, 0, -M_PI_2);
+  double fov_y = M_PI_4;
+  double depth_range_near = 0.5;
+  double depth_range_far = 20;
+  auto camera = builder.AddSystem<RgbdCamera>(
+      "camera", tree, pos, rpy, depth_range_near, depth_range_far, fov_y
+  );
+  builder.Connect(plant->get_output_port(0), camera->state_input_port());
+
+  auto diagram = builder.Build();
   systems::Simulator<double> simulator(*diagram);
   auto context = simulator.get_mutable_context();
   auto& plant_context = diagram->GetMutableSubsystemContext(*plant, context);
 
   DRAKE_DEMAND(plant->get_num_positions() == plant->get_num_positions());
   for (int i = 0; i < plant->get_num_positions(); i++) {
-    plant->set_position(&plant_context, i, 0.1);
+    plant->set_position(&plant_context, i, 0.2);
     plant->set_velocity(&plant_context, i, 0);
   }
 

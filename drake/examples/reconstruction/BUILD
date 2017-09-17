@@ -11,16 +11,6 @@ load("//tools:lint.bzl", "add_lint_tests")
 
 package(default_visibility = ["//visibility:public"])
 
-drake_cc_library(
-    name = "spring_controller_2D",
-    srcs = ["spring_controller_2D.cc"],
-    hdrs = ["spring_controller_2D.h"],
-    deps = [
-        "//drake/systems/framework:leaf_system",
-        "//drake/systems/framework:vector",
-    ],
-)
-
 drake_cc_binary(
     name = "reconstruct",
     srcs = ["reconstruct.cc"],
@@ -34,6 +24,8 @@ drake_cc_binary(
         "//drake/multibody/rigid_body_plant:drake_visualizer",
         "//drake/systems/analysis",
         "//drake/systems/lcm",
+        "//drake/systems/sensors:image_to_lcm_image_array_t",
+        "//drake/systems/sensors:rgbd_camera",
         "@com_github_gflags_gflags//:gflags",
     ],
 )
