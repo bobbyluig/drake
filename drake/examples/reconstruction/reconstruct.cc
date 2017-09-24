@@ -50,11 +50,11 @@ int do_main(int argc, char* argv[]) {
   lcm::DrakeLcm lcm;
   const auto& tree = plant->get_rigid_body_tree();
   auto publisher = builder.AddSystem<DrakeVisualizer>(tree, &lcm);
-  publisher->set_publish_period(0.01667);
+  publisher->set_publish_period(1.0 / 30);
   builder.Connect(plant->get_output_port(0), publisher->get_input_port(0));
 
-  Eigen::Vector3d pos = Eigen::Vector3d(0, 5, 0);
-  Eigen::Vector3d rpy = Eigen::Vector3d(0, 0, -M_PI_2);
+  Eigen::Vector3d pos = Eigen::Vector3d(10, 10, -5);
+  Eigen::Vector3d rpy = Eigen::Vector3d(0, 0, -(M_PI_2 + M_PI_4));
   double fov_y = M_PI_4;
   double depth_range_near = 0.5;
   double depth_range_far = 20;
@@ -70,7 +70,7 @@ int do_main(int argc, char* argv[]) {
       LcmPublisherSystem::Make<robotlocomotion::image_array_t>("images", &lcm)
   );
   image_array_lcm_publisher->set_name("publisher");
-  image_array_lcm_publisher->set_publish_period(0.01667);
+  image_array_lcm_publisher->set_publish_period(1.0 / 10);
 
   // Connect plant to camera.
   builder.Connect(plant->get_output_port(0), camera->state_input_port());
@@ -109,7 +109,6 @@ int do_main(int argc, char* argv[]) {
   }
 
   simulator.set_target_realtime_rate(FLAGS_realtime_rate);
-  simulator.set_publish_at_initialization(true);
   simulator.set_publish_every_time_step(false);
   simulator.Initialize();
   simulator.StepTo(100);
