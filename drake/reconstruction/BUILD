@@ -11,11 +11,25 @@ load("//tools:lint.bzl", "add_lint_tests")
 
 package(default_visibility = ["//visibility:public"])
 
+drake_cc_library(
+    name = "rgbd_to_lcm_point_cloud",
+    srcs = ["rgbd_to_lcm_point_cloud.cc"],
+    hdrs = ["rgbd_to_lcm_point_cloud.h"],
+    deps = [
+        "//drake/systems/sensors:rgbd_camera",
+        "@eigen",
+        "@lcmtypes_bot2_core",
+        "@lcmtypes_robotlocomotion",
+        "@zlib",
+    ],
+)
+
 drake_cc_binary(
     name = "reconstruct",
     srcs = ["reconstruct.cc"],
     data = [":models"],
     deps = [
+        ":rgbd_to_lcm_point_cloud",
         "//drake/common:find_resource",
         "//drake/lcm",
         "//drake/multibody:rigid_body_tree_construction",

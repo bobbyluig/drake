@@ -16,15 +16,15 @@ void Decompress(Image<kPixelType>& image, const image_t& msg) {
   size_t dest_size =
       (size_t) (image.width() * image.height() * image.kPixelSize);
 
-  auto decompress_status = uncompress(
+  const int decompress_status = uncompress(
       reinterpret_cast<Bytef*>(image.at(0, 0)), &dest_size,
-      reinterpret_cast<const uint8_t[]>(msg.data.data()), source_size);
+      reinterpret_cast<const uint8_t*>(msg.data.data()), source_size);
 
   DRAKE_DEMAND(decompress_status == Z_OK);
 }
 }
 
-RgbdToPointCloud::RgbdToPointCloud(CameraInfo& camera_info) :
+RgbdToPointCloud::RgbdToPointCloud(const CameraInfo& camera_info) :
     camera_info_(camera_info) {
   image_array_input_index_ =
       DeclareAbstractInputPort(Value<image_array_t>()).get_index();
@@ -62,7 +62,7 @@ void RgbdToPointCloud::CalcPointCloudMessage(
   RgbdCamera::ConvertDepthImageToPointCloud(
       depth_image, camera_info_, &point_cloud);
 
-  message.frame_id = image_array.header.frame_name;
+  message.frame_id = "world";
   message.points.clear();
   message.n_points = (int32_t) point_cloud.cols();
   for (int i = 0; i < point_cloud.cols(); ++i) {

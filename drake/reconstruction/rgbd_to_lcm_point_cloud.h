@@ -16,7 +16,7 @@ class RgbdToPointCloud : public systems::LeafSystem<double> {
  public:
   DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN(RgbdToPointCloud);
 
-  RgbdToPointCloud(CameraInfo& camera_info);
+  RgbdToPointCloud(const CameraInfo& camera_info);
 
   const InputPortDescriptor<double>& image_array_input_port() const;
 

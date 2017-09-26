@@ -226,19 +226,6 @@ drake_cc_library(
     ],
 )
 
-drake_cc_library(
-    name = "rgbd_to_lcm_point_cloud",
-    srcs = ["rgbd_to_lcm_point_cloud.cc"],
-    hdrs = ["rgbd_to_lcm_point_cloud.h"],
-    deps = [
-        ":rgbd_camera",
-        "@eigen",
-        "@lcmtypes_bot2_core",
-        "@lcmtypes_robotlocomotion",
-        "@zlib",
-    ],
-)
-
 drake_cc_binary(
     name = "rgbd_camera_publish_lcm_example",
     srcs = [

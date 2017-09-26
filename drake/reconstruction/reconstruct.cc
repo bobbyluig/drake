@@ -16,9 +16,9 @@
 #include "drake/systems/sensors/rgbd_camera.h"
 #include "drake/systems/sensors/image_to_lcm_image_array_t.h"
 #include "drake/systems/lcm/lcm_publisher_system.h"
+#include "drake/reconstruction/rgbd_to_lcm_point_cloud.h"
 
 namespace drake {
-namespace examples {
 namespace reconstruction {
 namespace {
 
@@ -27,12 +27,13 @@ using systems::DrakeVisualizer;
 using systems::DiagramBuilder;
 using systems::sensors::RgbdCamera;
 using systems::sensors::ImageToLcmImageArrayT;
+using systems::sensors::RgbdToPointCloud;
 using systems::lcm::LcmPublisherSystem;
 
 DEFINE_double(realtime_rate, 1, "Playback speed relative to real-time.");
 
 static const char* modelUrdfPath =
-    "drake/examples/reconstruction/ten_segment_2D.urdf";
+    "drake/reconstruction/ten_segment_2D.urdf";
 
 int do_main(int argc, char* argv[]) {
   gflags::ParseCommandLineFlags(&argc, &argv, true);
@@ -63,19 +64,26 @@ int do_main(int argc, char* argv[]) {
   );
 
   auto image_to_lcm_image_array = builder.AddSystem<ImageToLcmImageArrayT>(
-          "color", "depth", "label");
+      "color", "depth", "label");
   image_to_lcm_image_array->set_name("converter");
 
   auto image_array_lcm_publisher = builder.AddSystem(
-      LcmPublisherSystem::Make<robotlocomotion::image_array_t>("images", &lcm)
+      LcmPublisherSystem::Make<robotlocomotion::image_array_t>(
+          "DRAKE_RGBD_CAMERA_IMAGES", &lcm)
   );
-  image_array_lcm_publisher->set_name("publisher");
   image_array_lcm_publisher->set_publish_period(1.0 / 10);
+
+  auto& camera_info = camera->depth_camera_info();
+  auto rgbd_to_point_cloud = builder.AddSystem<RgbdToPointCloud>(camera_info);
+  auto point_cloud_lcm_publisher = builder.AddSystem(
+      LcmPublisherSystem::Make<bot_core::pointcloud_t>(
+          "DRAKE_POINTCLOUD_RGBD", &lcm));
+  point_cloud_lcm_publisher->set_publish_period(1.0 / 10);
 
   // Connect plant to camera.
   builder.Connect(plant->get_output_port(0), camera->state_input_port());
 
-  // Connect camera to LCM array.
+  // Connect camera to image array.
   builder.Connect(
       camera->color_image_output_port(),
       image_to_lcm_image_array->color_image_input_port()
@@ -91,10 +99,22 @@ int do_main(int argc, char* argv[]) {
       image_to_lcm_image_array->label_image_input_port()
   );
 
-  // Connect LCM array to LCM publisher.
+  // Connect image array to image publisher.
   builder.Connect(
       image_to_lcm_image_array->image_array_t_msg_output_port(),
       image_array_lcm_publisher->get_input_port(0)
+  );
+
+  // Connect image array to point cloud.
+  builder.Connect(
+      image_to_lcm_image_array->image_array_t_msg_output_port(),
+      rgbd_to_point_cloud->image_array_input_port()
+  );
+
+  // Connect point cloud to publisher.
+  builder.Connect(
+      rgbd_to_point_cloud->point_cloud_output_port(),
+      point_cloud_lcm_publisher->get_input_port(0)
   );
 
   auto diagram = builder.Build();
@@ -117,11 +137,10 @@ int do_main(int argc, char* argv[]) {
 
 } // namespace
 } // namespace reconstruction
-} // namespace systems
 } // namespace drake
 
 int main(int argc, char* argv[]) {
-  return drake::examples::reconstruction::do_main(argc, argv);
+  return drake::reconstruction::do_main(argc, argv);
 }
 
 
