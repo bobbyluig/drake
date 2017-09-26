@@ -51,7 +51,6 @@ int do_main(int argc, char* argv[]) {
   lcm::DrakeLcm lcm;
   const auto& tree = plant->get_rigid_body_tree();
   auto publisher = builder.AddSystem<DrakeVisualizer>(tree, &lcm);
-  publisher->set_publish_period(1.0 / 30);
   builder.Connect(plant->get_output_port(0), publisher->get_input_port(0));
 
   Eigen::Vector3d pos = Eigen::Vector3d(10, 10, -5);
@@ -63,52 +62,19 @@ int do_main(int argc, char* argv[]) {
       "camera", tree, pos, rpy, depth_range_near, depth_range_far, fov_y
   );
 
-  auto image_to_lcm_image_array = builder.AddSystem<ImageToLcmImageArrayT>(
-      "color", "depth", "label");
-  image_to_lcm_image_array->set_name("converter");
-
-  auto image_array_lcm_publisher = builder.AddSystem(
-      LcmPublisherSystem::Make<robotlocomotion::image_array_t>(
-          "DRAKE_RGBD_CAMERA_IMAGES", &lcm)
-  );
-  image_array_lcm_publisher->set_publish_period(1.0 / 10);
-
   auto& camera_info = camera->depth_camera_info();
   auto rgbd_to_point_cloud = builder.AddSystem<RgbdToPointCloud>(camera_info);
   auto point_cloud_lcm_publisher = builder.AddSystem(
       LcmPublisherSystem::Make<bot_core::pointcloud_t>(
           "DRAKE_POINTCLOUD_RGBD", &lcm));
-  point_cloud_lcm_publisher->set_publish_period(1.0 / 10);
 
   // Connect plant to camera.
   builder.Connect(plant->get_output_port(0), camera->state_input_port());
 
-  // Connect camera to image array.
-  builder.Connect(
-      camera->color_image_output_port(),
-      image_to_lcm_image_array->color_image_input_port()
-  );
-
+  // Connect depth image to point cloud.
   builder.Connect(
       camera->depth_image_output_port(),
-      image_to_lcm_image_array->depth_image_input_port()
-  );
-
-  builder.Connect(
-      camera->label_image_output_port(),
-      image_to_lcm_image_array->label_image_input_port()
-  );
-
-  // Connect image array to image publisher.
-  builder.Connect(
-      image_to_lcm_image_array->image_array_t_msg_output_port(),
-      image_array_lcm_publisher->get_input_port(0)
-  );
-
-  // Connect image array to point cloud.
-  builder.Connect(
-      image_to_lcm_image_array->image_array_t_msg_output_port(),
-      rgbd_to_point_cloud->image_array_input_port()
+      rgbd_to_point_cloud->depth_image_input_port()
   );
 
   // Connect point cloud to publisher.
@@ -129,7 +95,7 @@ int do_main(int argc, char* argv[]) {
   }
 
   simulator.set_target_realtime_rate(FLAGS_realtime_rate);
-  simulator.set_publish_every_time_step(false);
+  // simulator.set_publish_every_time_step(false);
   simulator.Initialize();
   simulator.StepTo(100);
   return 0;

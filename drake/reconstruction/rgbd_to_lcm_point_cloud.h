@@ -18,7 +18,7 @@ class RgbdToPointCloud : public systems::LeafSystem<double> {
 
   RgbdToPointCloud(const CameraInfo& camera_info);
 
-  const InputPortDescriptor<double>& image_array_input_port() const;
+  const InputPortDescriptor<double>& depth_image_input_port() const;
 
   const OutputPort<double>& point_cloud_output_port() const;
 
@@ -28,7 +28,7 @@ class RgbdToPointCloud : public systems::LeafSystem<double> {
 
   const CameraInfo& camera_info_;
 
-  int image_array_input_index_{};
+  int depth_image_input_index_{};
   int point_cloud_output_index_{};
 };
 
