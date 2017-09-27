@@ -20,13 +20,13 @@ namespace systems {
 namespace sensors {
 /// An RGB-D camera system that provides RGB, depth and label images using
 /// visual elements of RigidBodyTree.
-/// RgbdCamera uses [VTK](https://github.com/Kitware/VTK) as the rendering
+/// RgbdCamera2 uses [VTK](https://github.com/Kitware/VTK) as the rendering
 /// backend.
 /// Its image resolution is fixed at VGA (640 x 480 pixels) for all three
 /// images. The depth sensing range is 0.5 m to 5.0 m.
 ///
 /// Let `W` be the world coordinate system. In addition to `W`, there are three
-/// more coordinate systems that are associated with an RgbdCamera. They are
+/// more coordinate systems that are associated with an RgbdCamera2. They are
 /// defined as follows:
 ///
 ///   * `B` - The camera's base coordinate system: X-forward, Y-left, and Z-up.
@@ -61,11 +61,11 @@ namespace sensors {
 ///     respectively.
 ///
 /// @ingroup sensor_systems
-class RgbdCamera : public LeafSystem<double> {
+class RgbdCamera2 : public LeafSystem<double> {
  public:
-  DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN(RgbdCamera)
+  DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN(RgbdCamera2)
 
-  /// Converts a depth image obtained from RgbdCamera to a point cloud.  If a
+  /// Converts a depth image obtained from RgbdCamera2 to a point cloud.  If a
   /// pixel in the depth image has NaN depth value, all the `(x, y, z)` values
   /// in the converted point will be NaN.
   /// Similarly, if a pixel has either InvalidDepth::kTooFar or
@@ -74,7 +74,7 @@ class RgbdCamera : public LeafSystem<double> {
   /// Note that this matches the convention used by the Point Cloud Library
   /// (PCL).
   ///
-  /// @param[in] depth_image The input depth image obtained from RgbdCamera.
+  /// @param[in] depth_image The input depth image obtained from RgbdCamera2.
   ///
   /// @param[in] camera_info The input camera info which is used for conversion.
   ///
@@ -107,16 +107,13 @@ class RgbdCamera : public LeafSystem<double> {
     DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN(Label)
     /// The label used for pixels correspond to nothing.
     static constexpr int16_t kNoBody{std::numeric_limits<int16_t>::max()};
-    /// The label used for pixels correspond to the flat terrain.
-    static constexpr int16_t kFlatTerrain{
-      std::numeric_limits<int16_t>::max() - 1};
   };
 
-  /// A constructor for %RgbdCamera that defines `B` using Euler angles.
-  /// The pose of %RgbdCamera will be fixed to the world coordinate system
+  /// A constructor for %RgbdCamera2 that defines `B` using Euler angles.
+  /// The pose of %RgbdCamera2 will be fixed to the world coordinate system
   /// throughout the simulation.
   ///
-  /// @param name The name of the RgbdCamera.  This can be any value, but
+  /// @param name The name of the RgbdCamera2.  This can be any value, but
   /// should typically be unique among all sensors attached to a particular
   /// model instance.
   ///
@@ -131,19 +128,19 @@ class RgbdCamera : public LeafSystem<double> {
   /// @param orientation The roll-pitch-yaw orientation of `B` in `W`. This
   /// defines the orientation component of `X_WB`.
   ///
-  /// @param depth_range_near The minimum depth distance RgbdCamera can measure.
+  /// @param depth_range_near The minimum depth distance RgbdCamera2 can measure.
   /// The default is 0.5 meters.
   ///
-  /// @param depth_range_far The maximum depth distance RgbdCamera can measure.
+  /// @param depth_range_far The maximum depth distance RgbdCamera2 can measure.
   /// The default is 5 meters.
   ///
-  /// @param fov_y The RgbdCamera's vertical field of view.
+  /// @param fov_y The RgbdCamera2's vertical field of view.
   /// The default is PI / 4.
   ///
   /// @param show_window A flag for showing a visible window.  If this is false,
   /// offscreen rendering is executed. This is useful for debugging purposes.
   /// The default is true.
-  RgbdCamera(const std::string& name,
+  RgbdCamera2(const std::string& name,
              const RigidBodyTree<double>& tree,
              const Eigen::Vector3d& position,
              const Eigen::Vector3d& orientation,
@@ -152,11 +149,11 @@ class RgbdCamera : public LeafSystem<double> {
              double fov_y = M_PI_4,
              bool show_window = true);
 
-  /// A constructor for %RgbdCamera that defines `B` using a RigidBodyFrame.
-  /// The pose of %RgbdCamera is fixed to a user-defined frame and will be
+  /// A constructor for %RgbdCamera2 that defines `B` using a RigidBodyFrame.
+  /// The pose of %RgbdCamera2 is fixed to a user-defined frame and will be
   /// updated during the simulation.
   ///
-  /// @param name The name of the RgbdCamera.  This can be any value, but
+  /// @param name The name of the RgbdCamera2.  This can be any value, but
   /// should typically be unique among all sensors attached to a particular
   /// model instance.
   ///
@@ -167,19 +164,19 @@ class RgbdCamera : public LeafSystem<double> {
   ///
   /// @param frame The frame in @tree to which this camera is attached.
   ///
-  /// @param depth_range_near The minimum depth distance RgbdCamera can measure.
+  /// @param depth_range_near The minimum depth distance RgbdCamera2 can measure.
   /// The default is 0.5 meters.
   ///
-  /// @param depth_range_far The maximum depth distance RgbdCamera can measure.
+  /// @param depth_range_far The maximum depth distance RgbdCamera2 can measure.
   /// The default is 5 meters.
   ///
-  /// @param fov_y The RgbdCamera's vertical field of view.
+  /// @param fov_y The RgbdCamera2's vertical field of view.
   /// The default is PI / 4.
   ///
   /// @param show_window A flag for showing a visible window.  If this is false,
   /// offscreen rendering is executed. This is useful for debugging purposes.
   /// The default is true.
-  RgbdCamera(const std::string& name,
+  RgbdCamera2(const std::string& name,
              const RigidBodyTree<double>& tree,
              const RigidBodyFrame<double>& frame,
              double depth_range_near = 0.5,
@@ -187,7 +184,7 @@ class RgbdCamera : public LeafSystem<double> {
              double fov_y = M_PI_4,
              bool show_window = true);
 
-  ~RgbdCamera();
+  ~RgbdCamera2();
 
   /// Reterns the color sensor's info.
   const CameraInfo& color_camera_info() const;
@@ -201,10 +198,10 @@ class RgbdCamera : public LeafSystem<double> {
   /// Returns `X_BD`.
   const Eigen::Isometry3d& depth_camera_optical_pose() const;
 
-  /// Returns the RigidBodyFrame to which this RgbdCamera is attached.
+  /// Returns the RigidBodyFrame to which this RgbdCamera2 is attached.
   const RigidBodyFrame<double>& frame() const;
 
-  /// Returns the RigidBodyTree to which this RgbdCamera is attached.
+  /// Returns the RigidBodyTree to which this RgbdCamera2 is attached.
   const RigidBodyTree<double>& tree() const;
 
   /// Returns a descriptor of the vector valued input port that takes a vector
@@ -249,54 +246,54 @@ class RgbdCamera : public LeafSystem<double> {
 };
 
 /**
- * Wraps a continuous RgbdCamera with zero order holds to have it function as
+ * Wraps a continuous RgbdCamera2 with zero order holds to have it function as
  * a discrete sensor.
  */
-class RgbdCameraDiscrete : public systems::Diagram<double> {
+class RgbdCamera2Discrete : public systems::Diagram<double> {
  public:
-  DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN(RgbdCameraDiscrete);
+  DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN(RgbdCamera2Discrete);
 
-  /// Constructs a diagram containing a (non-registered) RgbdCamera that will
+  /// Constructs a diagram containing a (non-registered) RgbdCamera2 that will
   /// update at a given rate.
-  RgbdCameraDiscrete(std::unique_ptr<RgbdCamera> camera,
+  RgbdCamera2Discrete(std::unique_ptr<RgbdCamera2> camera,
                      double period = 1. / 30);
 
-  /// Returns reference to RgbdCamera intsance.
-  const RgbdCamera& camera() const { return *camera_; }
+  /// Returns reference to RgbdCamera2 intsance.
+  const RgbdCamera2& camera() const { return *camera_; }
 
-  /// Returns reference to RgbdCamera intsance.
-  RgbdCamera& mutable_camera() { return *camera_; }
+  /// Returns reference to RgbdCamera2 intsance.
+  RgbdCamera2& mutable_camera() { return *camera_; }
 
   /// Returns update period for discrete camera.
   double period() const { return period_; }
 
-  /// @see RgbdCamera::state_input_port().
+  /// @see RgbdCamera2::state_input_port().
   const InputPortDescriptor<double>& state_input_port() const {
     return get_input_port(input_port_state_);
   }
 
-  /// @see RgbdCamera::color_image_output_port().
+  /// @see RgbdCamera2::color_image_output_port().
   const systems::OutputPort<double>& color_image_output_port() const {
     return get_output_port(output_port_color_image_);
   }
 
-  /// @see RgbdCamera::depth_image_output_port().
+  /// @see RgbdCamera2::depth_image_output_port().
   const systems::OutputPort<double>& depth_image_output_port() const {
     return get_output_port(output_port_depth_image_);
   }
 
-  /// @see RgbdCamera::label_image_output_port().
+  /// @see RgbdCamera2::label_image_output_port().
   const systems::OutputPort<double>& label_image_output_port() const {
     return get_output_port(output_port_label_image_);
   }
 
-  /// @see RgbdCamera::camera_base_pose_output_port().
+  /// @see RgbdCamera2::camera_base_pose_output_port().
   const systems::OutputPort<double>& camera_base_pose_output_port() const {
     return get_output_port(output_port_pose_);
   }
 
  private:
-  RgbdCamera* const camera_{};
+  RgbdCamera2* const camera_{};
   const double period_{};
 
   int input_port_state_{-1};

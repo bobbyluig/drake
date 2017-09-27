@@ -13,10 +13,10 @@
 #include "drake/systems/analysis/simulator.h"
 #include "drake/systems/framework/diagram.h"
 #include "drake/systems/framework/diagram_builder.h"
-#include "drake/systems/sensors/rgbd_camera.h"
 #include "drake/systems/sensors/image_to_lcm_image_array_t.h"
 #include "drake/systems/lcm/lcm_publisher_system.h"
 #include "drake/reconstruction/rgbd_to_lcm_point_cloud.h"
+#include "drake/reconstruction/rgbd_camera_2.h"
 
 namespace drake {
 namespace reconstruction {
@@ -25,7 +25,7 @@ namespace {
 using systems::RigidBodyPlant;
 using systems::DrakeVisualizer;
 using systems::DiagramBuilder;
-using systems::sensors::RgbdCamera;
+using systems::sensors::RgbdCamera2;
 using systems::sensors::ImageToLcmImageArrayT;
 using systems::sensors::RgbdToPointCloud;
 using systems::lcm::LcmPublisherSystem;
@@ -57,13 +57,12 @@ int do_main(int argc, char* argv[]) {
   Eigen::Vector3d rpy = Eigen::Vector3d(0, 0, -(M_PI_2 + M_PI_4));
   double fov_y = M_PI_4;
   double depth_range_near = 0.5;
-  double depth_range_far = 20;
-  auto camera = builder.AddSystem<RgbdCamera>(
+  double depth_range_far = 10;
+  auto camera = builder.AddSystem<RgbdCamera2>(
       "camera", tree, pos, rpy, depth_range_near, depth_range_far, fov_y
   );
 
-  auto& camera_info = camera->depth_camera_info();
-  auto rgbd_to_point_cloud = builder.AddSystem<RgbdToPointCloud>(camera_info);
+  auto rgbd_to_point_cloud = builder.AddSystem<RgbdToPointCloud>(*camera);
   auto point_cloud_lcm_publisher = builder.AddSystem(
       LcmPublisherSystem::Make<bot_core::pointcloud_t>(
           "DRAKE_POINTCLOUD_RGBD", &lcm));
@@ -71,10 +70,15 @@ int do_main(int argc, char* argv[]) {
   // Connect plant to camera.
   builder.Connect(plant->get_output_port(0), camera->state_input_port());
 
-  // Connect depth image to point cloud.
+  // Connect camera to point cloud.
   builder.Connect(
       camera->depth_image_output_port(),
       rgbd_to_point_cloud->depth_image_input_port()
+  );
+
+  builder.Connect(
+      camera->camera_base_pose_output_port(),
+      rgbd_to_point_cloud->pose_vector_input_port()
   );
 
   // Connect point cloud to publisher.

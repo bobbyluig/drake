@@ -44,6 +44,7 @@ drake_cc_library(
     srcs = ["rgbd_to_lcm_point_cloud.cc"],
     hdrs = ["rgbd_to_lcm_point_cloud.h"],
     deps = [
+        ":rgbd_camera_2",
         "//drake/systems/sensors:rgbd_camera",
         "@eigen",
         "@lcmtypes_bot2_core",
@@ -57,6 +58,7 @@ drake_cc_binary(
     srcs = ["reconstruct.cc"],
     data = [":models"],
     deps = [
+        ":rgbd_camera_2",
         ":rgbd_to_lcm_point_cloud",
         "//drake/common:find_resource",
         "//drake/lcm",
@@ -67,7 +69,6 @@ drake_cc_binary(
         "//drake/systems/analysis",
         "//drake/systems/lcm",
         "//drake/systems/sensors:image_to_lcm_image_array_t",
-        "//drake/systems/sensors:rgbd_camera",
         "@com_github_gflags_gflags//:gflags",
     ],
 )
