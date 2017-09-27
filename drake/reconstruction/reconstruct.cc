@@ -57,7 +57,7 @@ int do_main(int argc, char* argv[]) {
   Eigen::Vector3d rpy = Eigen::Vector3d(0, 0, -(M_PI_2 + M_PI_4));
   double fov_y = M_PI_4;
   double depth_range_near = 0.5;
-  double depth_range_far = 10;
+  double depth_range_far = 20;
   auto camera = builder.AddSystem<RgbdCamera2>(
       "camera", tree, pos, rpy, depth_range_near, depth_range_far, fov_y
   );
@@ -87,6 +87,10 @@ int do_main(int argc, char* argv[]) {
       point_cloud_lcm_publisher->get_input_port(0)
   );
 
+  // Set publish rates
+  publisher->set_publish_period(1.0 / 30.0);
+  point_cloud_lcm_publisher->set_publish_period(1.0 / 30.0);
+
   auto diagram = builder.Build();
   systems::Simulator<double> simulator(*diagram);
   auto context = simulator.get_mutable_context();
@@ -99,7 +103,7 @@ int do_main(int argc, char* argv[]) {
   }
 
   simulator.set_target_realtime_rate(FLAGS_realtime_rate);
-  // simulator.set_publish_every_time_step(false);
+  simulator.set_publish_every_time_step(false);
   simulator.Initialize();
   simulator.StepTo(100);
   return 0;
