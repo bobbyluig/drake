@@ -100,7 +100,7 @@ void SolarSystem<T>::SetDefaultState(const systems::Context<T>&,
 //
 // The arm's horizontal length is oriented with the x-axis. The vertical length
 // is oriented with the z-axis. The origin of the arm is defined at the local
-// origin, and the top of the arm is positioned at the given height.
+// origin, and the top of the arm is positioned at the given height.QueryHandle
 template <class ParentId>
 void MakeArm(SourceId source_id, ParentId parent_id, double length,
              double height, double radius,

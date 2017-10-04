@@ -88,8 +88,8 @@ int do_main(int argc, char* argv[]) {
   );
 
   // Set publish rates
-  publisher->set_publish_period(1.0 / 30.0);
-  point_cloud_lcm_publisher->set_publish_period(1.0 / 30.0);
+  // publisher->set_publish_period(1.0 / 30.0);
+  // point_cloud_lcm_publisher->set_publish_period(1.0 / 30.0);
 
   auto diagram = builder.Build();
   systems::Simulator<double> simulator(*diagram);
@@ -103,7 +103,7 @@ int do_main(int argc, char* argv[]) {
   }
 
   simulator.set_target_realtime_rate(FLAGS_realtime_rate);
-  simulator.set_publish_every_time_step(false);
+  // simulator.set_publish_every_time_step(false);
   simulator.Initialize();
   simulator.StepTo(100);
   return 0;
