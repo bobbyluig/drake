@@ -187,7 +187,7 @@ TEST_P(ArticulatedIcpTest, PositiveReturnsIncreasingCost) {
   // Start the object at the given state, ensure that the cost increases as we
   // translate away from the object given this simple scene (where the object
   // is non-adversarial).
-  const bool publish_debug = false;
+  const bool publish_debug = true;
   double prev_cost = 0;
   SceneState scene_state(scene_.get());
   VectorXd q = q_init_;
@@ -249,7 +249,7 @@ TEST_P(ArticulatedIcpTest, PositiveReturnsConvergenceTest) {
   SceneState scene_state(scene_.get());
 
   const int iter_max = 15;
-  const bool publish_debug = false;
+  const bool publish_debug = true;
 
   int iter = 0;
   ArticulatedPointCorrespondences correspondence;

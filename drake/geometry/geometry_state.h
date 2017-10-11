@@ -324,6 +324,14 @@ class GeometryState {
 
   //@}
 
+  /* Used by RgbdCamera3. */
+  // TODO(bobbyluig): Find a better way to do this.
+
+  const std::unordered_map<GeometryId, internal::InternalGeometry>&
+  get_geometries() const {
+    return geometries_;
+  };
+
  private:
   // Allow geometry dispatch to peek into GeometryState.
   friend void DispatchLoadMessage(const GeometryState<double>&);

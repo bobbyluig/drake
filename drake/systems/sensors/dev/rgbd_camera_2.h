@@ -141,13 +141,13 @@ class RgbdCamera2 : public LeafSystem<double> {
   /// offscreen rendering is executed. This is useful for debugging purposes.
   /// The default is true.
   RgbdCamera2(const std::string& name,
-             const RigidBodyTree<double>& tree,
-             const Eigen::Vector3d& position,
-             const Eigen::Vector3d& orientation,
-             double depth_range_near = 0.5,
-             double depth_range_far = 5.0,
-             double fov_y = M_PI_4,
-             bool show_window = true);
+              const RigidBodyTree<double>& tree,
+              const Eigen::Vector3d& position,
+              const Eigen::Vector3d& orientation,
+              double depth_range_near = 0.5,
+              double depth_range_far = 5.0,
+              double fov_y = M_PI_4,
+              bool show_window = true);
 
   /// A constructor for %RgbdCamera2 that defines `B` using a RigidBodyFrame.
   /// The pose of %RgbdCamera2 is fixed to a user-defined frame and will be
@@ -177,12 +177,12 @@ class RgbdCamera2 : public LeafSystem<double> {
   /// offscreen rendering is executed. This is useful for debugging purposes.
   /// The default is true.
   RgbdCamera2(const std::string& name,
-             const RigidBodyTree<double>& tree,
-             const RigidBodyFrame<double>& frame,
-             double depth_range_near = 0.5,
-             double depth_range_far = 5.0,
-             double fov_y = M_PI_4,
-             bool show_window = true);
+              const RigidBodyTree<double>& tree,
+              const RigidBodyFrame<double>& frame,
+              double depth_range_near = 0.5,
+              double depth_range_far = 5.0,
+              double fov_y = M_PI_4,
+              bool show_window = true);
 
   ~RgbdCamera2();
 
@@ -256,7 +256,7 @@ class RgbdCamera2Discrete : public systems::Diagram<double> {
   /// Constructs a diagram containing a (non-registered) RgbdCamera2 that will
   /// update at a given rate.
   RgbdCamera2Discrete(std::unique_ptr<RgbdCamera2> camera,
-                     double period = 1. / 30);
+                      double period = 1. / 30);
 
   /// Returns reference to RgbdCamera2 intsance.
   const RgbdCamera2& camera() const { return *camera_; }

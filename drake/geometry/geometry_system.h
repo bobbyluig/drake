@@ -435,6 +435,20 @@ class GeometrySystem : public systems::LeafSystem<T> {
 
   //@}
 
+  /* Used by RgbdCamera3. */
+  // TODO(bobbyluig): Find a better way to do this.
+
+  const GeometryState<T>& get_initial_state() const {
+    return *initial_state_;
+  }
+
+  const GeometryState<T>& get_current_state() const {
+    const systems::Context<T>& context = *this->DoMakeContext().get();
+    const auto& g_context = static_cast<const GeometryContext<T>&>(context);
+    FullPoseUpdate(g_context);
+    return g_context.get_geometry_state();
+  }
+
  private:
   // Friend class to facilitate testing.
   friend class GeometrySystemTester;

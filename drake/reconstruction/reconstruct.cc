@@ -15,8 +15,8 @@
 #include "drake/systems/framework/diagram_builder.h"
 #include "drake/systems/sensors/image_to_lcm_image_array_t.h"
 #include "drake/systems/lcm/lcm_publisher_system.h"
-#include "drake/reconstruction/rgbd_to_lcm_point_cloud.h"
-#include "drake/reconstruction/rgbd_camera_2.h"
+#include "drake/systems/sensors/dev/rgbd_to_lcm_point_cloud.h"
+#include "drake/systems/sensors/dev/rgbd_camera_2.h"
 
 namespace drake {
 namespace reconstruction {
@@ -26,6 +26,7 @@ using systems::RigidBodyPlant;
 using systems::DrakeVisualizer;
 using systems::DiagramBuilder;
 using systems::sensors::RgbdCamera2;
+using systems::sensors::RgbdCamera2Discrete;
 using systems::sensors::ImageToLcmImageArrayT;
 using systems::sensors::RgbdToPointCloud;
 using systems::lcm::LcmPublisherSystem;
@@ -58,14 +59,20 @@ int do_main(int argc, char* argv[]) {
   double fov_y = M_PI_4;
   double depth_range_near = 0.5;
   double depth_range_far = 20;
-  auto camera = builder.AddSystem<RgbdCamera2>(
-      "camera", tree, pos, rpy, depth_range_near, depth_range_far, fov_y
+  auto camera = builder.AddSystem<RgbdCamera2Discrete>(
+      std::make_unique<RgbdCamera2>(
+          "camera", tree, pos, rpy, depth_range_near, depth_range_far, fov_y
+      ), 1 / 30.
   );
 
-  auto rgbd_to_point_cloud = builder.AddSystem<RgbdToPointCloud>(*camera);
+  auto rgbd_to_point_cloud = builder.AddSystem<RgbdToPointCloud>(
+      camera->camera()
+  );
   auto point_cloud_lcm_publisher = builder.AddSystem(
       LcmPublisherSystem::Make<bot_core::pointcloud_t>(
-          "DRAKE_POINTCLOUD_RGBD", &lcm));
+          "DRAKE_POINTCLOUD_RGBD", &lcm
+      )
+  );
 
   // Connect plant to camera.
   builder.Connect(plant->get_output_port(0), camera->state_input_port());
@@ -88,8 +95,8 @@ int do_main(int argc, char* argv[]) {
   );
 
   // Set publish rates
-  // publisher->set_publish_period(1.0 / 30.0);
-  // point_cloud_lcm_publisher->set_publish_period(1.0 / 30.0);
+  publisher->set_publish_period(1.0 / 30.0);
+  point_cloud_lcm_publisher->set_publish_period(1.0 / 30.0);
 
   auto diagram = builder.Build();
   systems::Simulator<double> simulator(*diagram);
@@ -103,7 +110,7 @@ int do_main(int argc, char* argv[]) {
   }
 
   simulator.set_target_realtime_rate(FLAGS_realtime_rate);
-  // simulator.set_publish_every_time_step(false);
+  simulator.set_publish_every_time_step(false);
   simulator.Initialize();
   simulator.StepTo(100);
   return 0;

@@ -303,6 +303,79 @@ drake_cc_binary(
     ],
 )
 
+# === dev/ ===
+
+drake_cc_library(
+    name = "rgbd_camera_2",
+    srcs = ["dev/rgbd_camera_2.cc"],
+    hdrs = ["dev/rgbd_camera_2.h"],
+    deps = [
+        ":camera_info",
+        ":image",
+        ":vtk_util",
+        "//drake/math:geometric_transform",
+        "//drake/multibody:rigid_body_frame",
+        "//drake/multibody:rigid_body_tree",
+        "//drake/systems/framework",
+        "//drake/systems/framework:diagram_builder",
+        "//drake/systems/primitives",
+        "//drake/systems/rendering:pose_vector",
+        "@eigen",
+        "@vtk//:vtkCommonCore",
+        "@vtk//:vtkCommonDataModel",
+        "@vtk//:vtkCommonTransforms",
+        "@vtk//:vtkFiltersGeneral",
+        "@vtk//:vtkFiltersSources",
+        "@vtk//:vtkIOGeometry",
+        "@vtk//:vtkIOImage",
+        "@vtk//:vtkRenderingCore",
+        "@vtk//:vtkRenderingOpenGL2",
+    ],
+)
+
+drake_cc_library(
+    name = "rgbd_camera_3",
+    srcs = ["dev/rgbd_camera_3.cc"],
+    hdrs = ["dev/rgbd_camera_3.h"],
+    deps = [
+        ":camera_info",
+        ":image",
+        ":vtk_util",
+        "//drake/geometry:geometry_system",
+        "//drake/math:geometric_transform",
+        "//drake/multibody:rigid_body_frame",
+        "//drake/multibody:rigid_body_tree",
+        "//drake/systems/framework",
+        "//drake/systems/framework:diagram_builder",
+        "//drake/systems/primitives",
+        "//drake/systems/rendering:pose_vector",
+        "@eigen",
+        "@vtk//:vtkCommonCore",
+        "@vtk//:vtkCommonDataModel",
+        "@vtk//:vtkCommonTransforms",
+        "@vtk//:vtkFiltersGeneral",
+        "@vtk//:vtkFiltersSources",
+        "@vtk//:vtkIOGeometry",
+        "@vtk//:vtkIOImage",
+        "@vtk//:vtkRenderingCore",
+        "@vtk//:vtkRenderingOpenGL2",
+    ],
+)
+
+drake_cc_library(
+    name = "rgbd_to_lcm_point_cloud",
+    srcs = ["dev/rgbd_to_lcm_point_cloud.cc"],
+    hdrs = ["dev/rgbd_to_lcm_point_cloud.h"],
+    deps = [
+        ":rgbd_camera",
+        ":rgbd_camera_2",
+        "@eigen",
+        "@lcmtypes_bot2_core",
+        "@lcmtypes_robotlocomotion",
+        "@zlib",
+    ],
+)
+
 # === test/ ===
 
 drake_cc_googletest(

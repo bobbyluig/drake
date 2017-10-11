@@ -6,7 +6,7 @@
 #include "robotlocomotion/image_array_t.hpp"
 
 #include "drake/systems/framework/leaf_system.h"
-#include "rgbd_camera_2.h"
+#include "drake/systems/sensors/dev/rgbd_camera_2.h"
 
 namespace drake {
 namespace systems {

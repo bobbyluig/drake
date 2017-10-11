@@ -813,30 +813,7 @@ RgbdCamera2::label_image_output_port() const {
   return *label_image_port_;
 }
 
-void RgbdCamera2::OutputPoseVector(
-    const Context<double>& context,
-    rendering::PoseVector<double>* pose_vector) const {
-  const BasicVector<double>* input_vector =
-      this->EvalVectorInput(context, kPortStateInput);
-
-  impl_->OutputPoseVector(*input_vector, pose_vector);
-}
-
-void RgbdCamera2::OutputColorImage(const Context<double>& context,
-                                  ImageRgba8U* color_image) const {
-  const BasicVector<double>* input_vector =
-      this->EvalVectorInput(context, kPortStateInput);
-
-  impl_->OutputColorImage(*input_vector, color_image);
-}
-
-void RgbdCamera2::OutputDepthImage(const Context<double>& context,
-                                  ImageDepth32F* depth_image) const {
-  const BasicVector<double>* input_vector =
-      this->EvalVectorInput(context, kPortStateInput);
-
-  impl_->OutputDepthImage(*input_vector, depth_image);
-}
+c
 
 void RgbdCamera2::OutputLabelImage(const Context<double>& context,
                                   ImageLabel16I* label_image) const {
