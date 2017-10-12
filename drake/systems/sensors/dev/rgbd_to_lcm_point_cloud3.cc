@@ -1,4 +1,4 @@
-#include "rgbd_to_lcm_point_cloud.h"
+#include "rgbd_to_lcm_point_cloud3.h"
 
 namespace drake {
 namespace systems {
@@ -8,7 +8,7 @@ using robotlocomotion::image_t;
 using robotlocomotion::image_array_t;
 using rendering::PoseVector;
 
-RgbdToPointCloud::RgbdToPointCloud(const RgbdCamera2& camera) :
+RgbdToPointCloud3::RgbdToPointCloud3(const RgbdCamera3& camera) :
     camera_(camera) {
   depth_image_input_index_ =
       DeclareAbstractInputPort(Value<ImageDepth32F>()).get_index();
@@ -18,24 +18,24 @@ RgbdToPointCloud::RgbdToPointCloud(const RgbdCamera2& camera) :
 
   point_cloud_output_index_ =
       DeclareAbstractOutputPort(
-          &RgbdToPointCloud::CalcPointCloudMessage).get_index();
+          &RgbdToPointCloud3::CalcPointCloudMessage).get_index();
 }
 
 const InputPortDescriptor<double>&
-RgbdToPointCloud::depth_image_input_port() const {
+RgbdToPointCloud3::depth_image_input_port() const {
   return this->get_input_port(depth_image_input_index_);
 }
 
 const InputPortDescriptor<double>&
-RgbdToPointCloud::pose_vector_input_port() const {
+RgbdToPointCloud3::pose_vector_input_port() const {
   return this->get_input_port(pose_vector_input_index_);
 }
 
-const OutputPort<double>& RgbdToPointCloud::point_cloud_output_port() const {
+const OutputPort<double>& RgbdToPointCloud3::point_cloud_output_port() const {
   return this->get_output_port(point_cloud_output_index_);
 }
 
-void RgbdToPointCloud::CalcPointCloudMessage(
+void RgbdToPointCloud3::CalcPointCloudMessage(
     const systems::Context<double>& context,
     bot_core::pointcloud_t* output) const {
   const AbstractValue* depth_image_value =
@@ -52,8 +52,7 @@ void RgbdToPointCloud::CalcPointCloudMessage(
 
   bot_core::pointcloud_t& message = *output;
   Eigen::Matrix3Xf point_cloud;
-  RgbdCamera2::ConvertDepthImageToPointCloud(
-      depth_image, camera_info, &point_cloud);
+  RgbdCamera3::DepthImageToPointCloud(depth_image, camera_info, &point_cloud);
 
   message.frame_id = std::string(RigidBodyTreeConstants::kWorldName);
   message.points.clear();

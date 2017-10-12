@@ -6,17 +6,17 @@
 #include "robotlocomotion/image_array_t.hpp"
 
 #include "drake/systems/framework/leaf_system.h"
-#include "drake/systems/sensors/dev/rgbd_camera_2.h"
+#include "drake/systems/sensors/dev/rgbd_camera_3.h"
 
 namespace drake {
 namespace systems {
 namespace sensors {
 
-class RgbdToPointCloud : public systems::LeafSystem<double> {
+class RgbdToPointCloud3 : public systems::LeafSystem<double> {
  public:
-  DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN(RgbdToPointCloud);
+  DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN(RgbdToPointCloud3);
 
-  RgbdToPointCloud(const RgbdCamera2& camera);
+  RgbdToPointCloud3(const RgbdCamera3& camera);
 
   const InputPortDescriptor<double>& depth_image_input_port() const;
 
@@ -28,7 +28,7 @@ class RgbdToPointCloud : public systems::LeafSystem<double> {
   void CalcPointCloudMessage(const systems::Context<double>& context,
                              bot_core::pointcloud_t* output) const;
 
-  const RgbdCamera2& camera_;
+  const RgbdCamera3& camera_;
 
   int depth_image_input_index_{};
   int pose_vector_input_index_{};

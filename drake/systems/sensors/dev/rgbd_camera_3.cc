@@ -56,15 +56,15 @@ namespace sensors {
 
 using vtk_util::ConvertToVtkTransform;
 using vtk_util::MakeVtkPointerArray;
+using geometry::QueryHandle;
 using geometry::GeometryState;
 using geometry::GeometryIndex;
 using geometry::ShapeReifier;
 using geometry::Shape;
 using geometry::internal::InternalGeometry;
+using geometry::internal::InternalAnchoredGeometry;
 
 namespace {
-
-const int kPortStateInput = 0;
 
 const double kClippingPlaneNear = 0.01;
 const double kClippingPlaneFar = 100.;
@@ -75,14 +75,6 @@ const int kImageHeight = 480;  // In pixels
 // For Zbuffer value conversion.
 const double kA = kClippingPlaneFar / (kClippingPlaneFar - kClippingPlaneNear);
 const double kB = -kA * kClippingPlaneNear;
-
-std::string RemoveFileExtension(const std::string& filepath) {
-  const size_t last_dot = filepath.find_last_of(".");
-  if (last_dot == std::string::npos) {
-    DRAKE_DEMAND(false);
-  }
-  return filepath.substr(0, last_dot);
-}
 
 // Register the object factories for the vtkRenderingOpenGL2 module.
 struct ModuleInitVtkRenderingOpenGL2 {
@@ -140,8 +132,6 @@ void RgbdCamera3::DepthImageToPointCloud(const ImageDepth32F& depth_image,
 
 class RgbdCamera3::ShapeToVtk : public ShapeReifier {
  public:
-  DRAKE_DEFAULT_COPY_AND_MOVE_AND_ASSIGN(ShapeToVtk)
-
   ShapeToVtk() = default;
   ~ShapeToVtk() override = default;
 
@@ -183,7 +173,7 @@ class RgbdCamera3::ShapeToVtk : public ShapeReifier {
   }
 
  private:
-  vtkNew<vtkPolyDataMapper> mapper_;
+  vtkNew<vtkPolyDataMapper> mapper_{};
 };
 
 class RgbdCamera3::Impl : private ModuleInitVtkRenderingOpenGL2 {
@@ -216,8 +206,10 @@ class RgbdCamera3::Impl : private ModuleInitVtkRenderingOpenGL2 {
   const GeometrySystem<double>& geometry() const { return geometry_; }
 
   // These are the calculator method implementations for the four output ports.
-  void OutputColorImage(ImageRgba8U* color_image) const;
-  void OutputDepthImage(ImageDepth32F* depth_image) const;
+  void OutputColorImage(ImageRgba8U* color_image,
+                        const QueryHandle<double>& query_handle) const;
+  void OutputDepthImage(ImageDepth32F* depth_image,
+                        const QueryHandle<double>& query_handle) const;
   void OutputPoseVector(rendering::PoseVector<double>* pose_vector) const;
 
  private:
@@ -226,20 +218,20 @@ class RgbdCamera3::Impl : private ModuleInitVtkRenderingOpenGL2 {
   // TODO(sherm1) This should be the calculator for a cache entry containing
   // the VTK update that must be valid before outputting any image info. For
   // now it has to be repeated before each image output port calculation.
-  void UpdateModelPoses() const;
+  void UpdateModelPoses(const QueryHandle<double>& query_handle) const;
 
   // Initializes camera pose first and sets camera pose in the world frame X_WC.
   void SetModelTransformMatrixToVtkCamera(
       vtkCamera* camera, const vtkSmartPointer<vtkTransform>& X_WC) const;
 
   const GeometrySystem<double>& geometry_;
-  const CameraInfo color_camera_info_{};
-  const CameraInfo depth_camera_info_{};
+  const CameraInfo color_camera_info_;
+  const CameraInfo depth_camera_info_;
   const Eigen::Isometry3d X_BC_;
   const Eigen::Isometry3d X_BD_;
   const Eigen::Isometry3d X_WB_initial_;
-  const double depth_range_near_{};
-  const double depth_range_far_{};
+  const double depth_range_near_;
+  const double depth_range_far_;
 
   std::map<GeometryIndex, vtkSmartPointer<vtkActor>> id_object_map_;
   vtkNew<vtkRenderer> color_depth_renderer_;
@@ -342,7 +334,20 @@ void RgbdCamera3::Impl::SetModelTransformMatrixToVtkCamera(
 void RgbdCamera3::Impl::CreateRenderingWorld() {
   const GeometryState<double>& state = geometry_.get_initial_state();
 
-  // TODO(bobbyluig): Support anchored geometries.
+  for (const auto& pair : state.get_anchored_geometries()) {
+    const InternalAnchoredGeometry& geometry = pair.second;
+
+    vtkNew<vtkActor> actor;
+    ShapeToVtk reifier;
+
+    reifier.Reify(geometry.get_shape(), actor);
+
+    auto& X_WV = geometry.get_pose_in_parent();
+    vtkSmartPointer<vtkTransform> vtk_transform = ConvertToVtkTransform(X_WV);
+    actor->SetUserTransform(vtk_transform);
+    color_depth_renderer_->AddActor(actor.GetPointer());
+  }
+
   for (const auto& pair : state.get_geometries()) {
     const InternalGeometry& geometry = pair.second;
 
@@ -359,16 +364,22 @@ void RgbdCamera3::Impl::CreateRenderingWorld() {
   }
 }
 
-void RgbdCamera3::Impl::OutputColorImage(ImageRgba8U* color_image) const {
+void RgbdCamera3::Impl::OutputColorImage(
+    ImageRgba8U* color_image,
+    const QueryHandle<double>& query_handle
+) const {
   // TODO(sherm1) Should evaluate VTK cache entry.
-  UpdateModelPoses();
+  UpdateModelPoses(query_handle);
   PerformVTKUpdate(color_depth_render_window_, color_filter_, color_exporter_);
   color_exporter_->Export(color_image->at(0, 0));
 }
 
-void RgbdCamera3::Impl::OutputDepthImage(ImageDepth32F* depth_image_out) const {
+void RgbdCamera3::Impl::OutputDepthImage(
+    ImageDepth32F* depth_image_out,
+    const QueryHandle<double>& query_handle
+) const {
   // TODO(sherm1) Should evaluate VTK cache entry.
-  UpdateModelPoses();
+  UpdateModelPoses(query_handle);
   PerformVTKUpdate(color_depth_render_window_, depth_filter_, depth_exporter_);
   depth_exporter_->Export(depth_image_out->at(0, 0));
 
@@ -392,8 +403,10 @@ void RgbdCamera3::Impl::OutputPoseVector(
   camera_base_pose->set_rotation(quat);
 }
 
-void RgbdCamera3::Impl::UpdateModelPoses() const {
-  const GeometryState<double>& state = geometry_.get_initial_state();
+void RgbdCamera3::Impl::UpdateModelPoses(
+    const QueryHandle<double>& query_handle) const {
+  const auto& context = geometry_.get_current_context(query_handle);
+  const auto& state = context.get_geometry_state();
 
   // Updates body poses.
   for (const auto& pair : state.get_geometries()) {
@@ -450,6 +463,8 @@ RgbdCamera3::RgbdCamera3(const std::string& name,
 void RgbdCamera3::Init(const std::string& name) {
   set_name(name);
 
+  query_handle_port_ = &this->DeclareAbstractInputPort();
+
   ImageRgba8U color_image(kImageWidth, kImageHeight);
   color_image_port_ = &this->DeclareAbstractOutputPort(
       sensors::ImageRgba8U(color_image), &RgbdCamera3::OutputColorImage);
@@ -484,6 +499,11 @@ const GeometrySystem<double>& RgbdCamera3::geometry() const {
   return impl_->geometry();
 }
 
+const InputPortDescriptor<double>&
+RgbdCamera3::query_handle_input_port() const {
+  return *query_handle_port_;
+}
+
 const OutputPort<double>&
 RgbdCamera3::camera_base_pose_output_port() const {
   return *camera_base_pose_port_;
@@ -507,12 +527,20 @@ void RgbdCamera3::OutputPoseVector(
 
 void RgbdCamera3::OutputColorImage(const Context<double>& context,
                                    ImageRgba8U* color_image) const {
-  impl_->OutputColorImage(color_image);
+  const AbstractValue* query_handle_value =
+      this->EvalAbstractInput(context, query_handle_port_->get_index());
+  const QueryHandle<double>& query_handle =
+      query_handle_value->GetValue<QueryHandle<double>>();
+  impl_->OutputColorImage(color_image, query_handle);
 }
 
 void RgbdCamera3::OutputDepthImage(const Context<double>& context,
                                    ImageDepth32F* depth_image) const {
-  impl_->OutputDepthImage(depth_image);
+  const AbstractValue* query_handle_value =
+      this->EvalAbstractInput(context, query_handle_port_->get_index());
+  const QueryHandle<double>& query_handle =
+      query_handle_value->GetValue<QueryHandle<double>>();
+  impl_->OutputDepthImage(depth_image, query_handle);
 }
 
 }  // namespace sensors

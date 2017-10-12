@@ -68,4 +68,22 @@ drake_cc_binary(
     ],
 )
 
+drake_cc_binary(
+    name = "geometry_reconstruction",
+    srcs = ["geometry_reconstruction.cc"],
+    deps = [
+        ":solar_system",
+        "//drake/geometry:geometry_system",
+        "//drake/geometry:geometry_visualization",
+        "//drake/systems/analysis:simulator",
+        "//drake/systems/framework:diagram",
+        "//drake/systems/lcm",
+        "//drake/systems/primitives:constant_vector_source",
+        "//drake/systems/primitives:signal_logger",
+        "//drake/systems/rendering:pose_bundle_to_draw_message",
+        "//drake/systems/sensors:rgbd_camera_3",
+        "//drake/systems/sensors:rgbd_to_lcm_point_cloud3",
+    ],
+)
+
 add_lint_tests()

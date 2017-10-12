@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "drake/geometry/geometry_state.h"
+#include "drake/geometry/geometry_context.h"
 #include "drake/geometry/query_handle.h"
 #include "drake/geometry/query_results/penetration_as_point_pair.h"
 #include "drake/systems/framework/context.h"
@@ -17,7 +18,8 @@ namespace geometry {
 
 class GeometryInstance;
 
-template <typename T> class GeometryContext;
+template<typename T>
+class GeometryContext;
 
 /** GeometrySystem serves as a system-level wrapper for GeometryWorld. It serves
  as the nexus for all geometry (and geometry-based operations) in a Diagram.
@@ -192,7 +194,7 @@ template <typename T> class GeometryContext;
  @endcond
 
  @tparam T The underlying scalar type. Must be a valid Eigen scalar. */
-template <typename T>
+template<typename T>
 class GeometrySystem : public systems::LeafSystem<T> {
  public:
   DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN(GeometrySystem)
@@ -227,7 +229,7 @@ class GeometrySystem : public systems::LeafSystem<T> {
    @throws std::logic_error if a context has already been allocated for this
                             %GeometrySystem.
    @see GeometryState::RegisterNewSource() */
-  SourceId RegisterSource(const std::string &name = "");
+  SourceId RegisterSource(const std::string& name = "");
 
   /** Given a valid source `id`, returns the "frame id" input port associated
    with that `id`. This port's value is an ordered list of frame ids; it
@@ -442,11 +444,9 @@ class GeometrySystem : public systems::LeafSystem<T> {
     return *initial_state_;
   }
 
-  const GeometryState<T>& get_current_state() const {
-    const systems::Context<T>& context = *this->DoMakeContext().get();
-    const auto& g_context = static_cast<const GeometryContext<T>&>(context);
-    FullPoseUpdate(g_context);
-    return g_context.get_geometry_state();
+  const GeometryContext<T>& get_current_context(
+      const QueryHandle<T>& handle) const {
+    return static_cast<const GeometryContext<T>&>(*handle.context_);
   }
 
  private:
@@ -462,7 +462,7 @@ class GeometrySystem : public systems::LeafSystem<T> {
   // Sets the context into the output port value so downstream consumers can
   // perform queries.
   void CalcQueryHandle(const systems::Context<T>& context,
-                      QueryHandle<T>* output) const;
+                       QueryHandle<T>* output) const;
 
   // Constructs a PoseBundle of length equal to the concatenation of all inputs.
   // This is the method used by the allocator for the output port.
@@ -491,7 +491,7 @@ class GeometrySystem : public systems::LeafSystem<T> {
 
   // Asserts the given source_id is registered, throwing an exception whose
   // message is the given message with the source_id appended if not.
-  void ThrowUnlessRegistered(SourceId source_id, const char *message) const;
+  void ThrowUnlessRegistered(SourceId source_id, const char* message) const;
 
   // A struct that stores the port indices for a given source.
   // TODO(SeanCurtis-TRI): Consider making these TypeSafeIndex values.

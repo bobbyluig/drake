@@ -363,12 +363,24 @@ drake_cc_library(
 )
 
 drake_cc_library(
-    name = "rgbd_to_lcm_point_cloud",
-    srcs = ["dev/rgbd_to_lcm_point_cloud.cc"],
-    hdrs = ["dev/rgbd_to_lcm_point_cloud.h"],
+    name = "rgbd_to_lcm_point_cloud2",
+    srcs = ["dev/rgbd_to_lcm_point_cloud2.cc"],
+    hdrs = ["dev/rgbd_to_lcm_point_cloud2.h"],
     deps = [
-        ":rgbd_camera",
         ":rgbd_camera_2",
+        "@eigen",
+        "@lcmtypes_bot2_core",
+        "@lcmtypes_robotlocomotion",
+        "@zlib",
+    ],
+)
+
+drake_cc_library(
+    name = "rgbd_to_lcm_point_cloud3",
+    srcs = ["dev/rgbd_to_lcm_point_cloud3.cc"],
+    hdrs = ["dev/rgbd_to_lcm_point_cloud3.h"],
+    deps = [
+        ":rgbd_camera_3",
         "@eigen",
         "@lcmtypes_bot2_core",
         "@lcmtypes_robotlocomotion",

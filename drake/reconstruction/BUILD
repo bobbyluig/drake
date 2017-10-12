@@ -26,7 +26,7 @@ drake_cc_binary(
         "//drake/systems/lcm",
         "//drake/systems/sensors:image_to_lcm_image_array_t",
         "//drake/systems/sensors:rgbd_camera_2",
-        "//drake/systems/sensors:rgbd_to_lcm_point_cloud",
+        "//drake/systems/sensors:rgbd_to_lcm_point_cloud2",
         "@com_github_gflags_gflags//:gflags",
     ],
 )

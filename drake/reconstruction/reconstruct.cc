@@ -15,7 +15,7 @@
 #include "drake/systems/framework/diagram_builder.h"
 #include "drake/systems/sensors/image_to_lcm_image_array_t.h"
 #include "drake/systems/lcm/lcm_publisher_system.h"
-#include "drake/systems/sensors/dev/rgbd_to_lcm_point_cloud.h"
+#include "drake/systems/sensors/dev/rgbd_to_lcm_point_cloud2.h"
 #include "drake/systems/sensors/dev/rgbd_camera_2.h"
 
 namespace drake {
@@ -28,13 +28,12 @@ using systems::DiagramBuilder;
 using systems::sensors::RgbdCamera2;
 using systems::sensors::RgbdCamera2Discrete;
 using systems::sensors::ImageToLcmImageArrayT;
-using systems::sensors::RgbdToPointCloud;
+using systems::sensors::RgbdToPointCloud2;
 using systems::lcm::LcmPublisherSystem;
 
 DEFINE_double(realtime_rate, 1, "Playback speed relative to real-time.");
 
-static const char* modelUrdfPath =
-    "drake/reconstruction/ten_segment_2D.urdf";
+const char* modelUrdfPath = "drake/reconstruction/ten_segment_2D.urdf";
 
 int do_main(int argc, char* argv[]) {
   gflags::ParseCommandLineFlags(&argc, &argv, true);
@@ -65,7 +64,7 @@ int do_main(int argc, char* argv[]) {
       ), 1 / 30.
   );
 
-  auto rgbd_to_point_cloud = builder.AddSystem<RgbdToPointCloud>(
+  auto rgbd_to_point_cloud = builder.AddSystem<RgbdToPointCloud2>(
       camera->camera()
   );
   auto point_cloud_lcm_publisher = builder.AddSystem(

@@ -60,6 +60,8 @@ class RgbdCamera3 : public LeafSystem<double> {
 
   const GeometrySystem<double>& geometry() const;
 
+  const InputPortDescriptor<double>& query_handle_input_port() const;
+
   const OutputPort<double>& color_image_output_port() const;
 
   const OutputPort<double>& depth_image_output_port() const;
@@ -76,6 +78,7 @@ class RgbdCamera3 : public LeafSystem<double> {
   void OutputPoseVector(const Context<double>& context,
                         rendering::PoseVector<double>* pose_vector) const;
 
+  const InputPortDescriptor<double>* query_handle_port_{};
   const OutputPort<double>* color_image_port_{};
   const OutputPort<double>* depth_image_port_{};
   const OutputPort<double>* camera_base_pose_port_{};
