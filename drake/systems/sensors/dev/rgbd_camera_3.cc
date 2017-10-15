@@ -132,6 +132,8 @@ void RgbdCamera3::DepthImageToPointCloud(const ImageDepth32F& depth_image,
 
 class RgbdCamera3::ShapeToVtk : public ShapeReifier {
  public:
+  DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN(ShapeToVtk);
+
   ShapeToVtk() = default;
   ~ShapeToVtk() override = default;
 

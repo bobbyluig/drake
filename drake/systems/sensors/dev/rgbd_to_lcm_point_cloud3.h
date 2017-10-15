@@ -16,11 +16,12 @@ class RgbdToPointCloud3 : public systems::LeafSystem<double> {
  public:
   DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN(RgbdToPointCloud3);
 
-  RgbdToPointCloud3(const RgbdCamera3& camera);
+  RgbdToPointCloud3(
+      const std::vector<std::shared_ptr<const RgbdCamera3>>& cameras);
 
-  const InputPortDescriptor<double>& depth_image_input_port() const;
+  const InputPortDescriptor<double>& depth_image_input_port(int index) const;
 
-  const InputPortDescriptor<double>& pose_vector_input_port() const;
+  const InputPortDescriptor<double>& pose_vector_input_port(int index) const;
 
   const OutputPort<double>& point_cloud_output_port() const;
 
@@ -28,10 +29,10 @@ class RgbdToPointCloud3 : public systems::LeafSystem<double> {
   void CalcPointCloudMessage(const systems::Context<double>& context,
                              bot_core::pointcloud_t* output) const;
 
-  const RgbdCamera3& camera_;
+  const std::vector<std::shared_ptr<const RgbdCamera3>>& cameras_;
 
-  int depth_image_input_index_{};
-  int pose_vector_input_index_{};
+  std::vector<int> depth_image_input_indices_{};
+  std::vector<int> pose_vector_input_indices_{};
   int point_cloud_output_index_{};
 };
 

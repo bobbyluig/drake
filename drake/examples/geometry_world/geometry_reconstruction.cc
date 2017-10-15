@@ -55,19 +55,30 @@ int do_main() {
                   converter->get_input_port(0));
   builder.Connect(*converter, *publisher);
 
-  // Camera
-  Eigen::Vector3d pos = Eigen::Vector3d(-10, 0, 0);
-  Eigen::Vector3d rpy = Eigen::Vector3d(0, 0);
+  // Cameras
   double fov_y = M_PI_4;
   double depth_range_near = 0.5;
   double depth_range_far = 20;
-  auto camera = builder.AddSystem<RgbdCamera3>(
-      "camera", *geometry_system, pos, rpy,
+
+  Eigen::Vector3d pos1 = Eigen::Vector3d(-10, 0, 0);
+  Eigen::Vector3d rpy1 = Eigen::Vector3d(0, 0, 0);
+  auto camera1 = builder.AddSystem<RgbdCamera3>(
+      "camera1", *geometry_system, pos1, rpy1,
       depth_range_near, depth_range_far, fov_y
   );
 
-  auto rgbd_to_point_cloud = builder.AddSystem<RgbdToPointCloud3>(*camera);
+  Eigen::Vector3d pos2 = Eigen::Vector3d(10, 0, 0);
+  Eigen::Vector3d rpy2 = Eigen::Vector3d(0, 0, M_PI);
+  auto camera2 = builder.AddSystem<RgbdCamera3>(
+      "camera2", *geometry_system, pos2, rpy2,
+      depth_range_near, depth_range_far, fov_y
+  );
 
+  std::vector<std::shared_ptr<const RgbdCamera3>> cameras =
+      {std::shared_ptr<const RgbdCamera3>(camera1),
+       std::shared_ptr<const RgbdCamera3>(camera2)};
+
+  auto rgbd_to_point_cloud = builder.AddSystem<RgbdToPointCloud3>(cameras);
   auto point_cloud_lcm_publisher = builder.AddSystem(
       LcmPublisherSystem::Make<bot_core::pointcloud_t>(
           "DRAKE_POINTCLOUD_RGBD", &lcm
@@ -77,18 +88,31 @@ int do_main() {
   /// Connect query to camera.
   builder.Connect(
       geometry_system->get_query_output_port(),
-      camera->query_handle_input_port()
+      camera1->query_handle_input_port()
+  );
+
+  builder.Connect(
+      geometry_system->get_query_output_port(),
+      camera2->query_handle_input_port()
   );
 
   // Connect camera to point cloud.
   builder.Connect(
-      camera->depth_image_output_port(),
-      rgbd_to_point_cloud->depth_image_input_port()
+      camera1->depth_image_output_port(),
+      rgbd_to_point_cloud->depth_image_input_port(0)
+  );
+  builder.Connect(
+      camera1->camera_base_pose_output_port(),
+      rgbd_to_point_cloud->pose_vector_input_port(0)
   );
 
   builder.Connect(
-      camera->camera_base_pose_output_port(),
-      rgbd_to_point_cloud->pose_vector_input_port()
+      camera2->depth_image_output_port(),
+      rgbd_to_point_cloud->depth_image_input_port(1)
+  );
+  builder.Connect(
+      camera2->camera_base_pose_output_port(),
+      rgbd_to_point_cloud->pose_vector_input_port(1)
   );
 
   // Connect point cloud to publisher.
