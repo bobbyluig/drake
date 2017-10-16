@@ -334,9 +334,9 @@ void RgbdCamera3::Impl::SetModelTransformMatrixToVtkCamera(
 }
 
 void RgbdCamera3::Impl::CreateRenderingWorld() {
-  const GeometryState<double>& state = geometry_.get_initial_state();
+  const GeometryState<double>& state = geometry_.GetInitialState();
 
-  for (const auto& pair : state.get_anchored_geometries()) {
+  for (const auto& pair : geometry_.GetAnchoredGeometries(state)) {
     const InternalAnchoredGeometry& geometry = pair.second;
 
     vtkNew<vtkActor> actor;
@@ -350,7 +350,7 @@ void RgbdCamera3::Impl::CreateRenderingWorld() {
     color_depth_renderer_->AddActor(actor.GetPointer());
   }
 
-  for (const auto& pair : state.get_geometries()) {
+  for (const auto& pair : geometry_.GetGeometries(state)) {
     const InternalGeometry& geometry = pair.second;
 
     vtkNew<vtkActor> actor;
@@ -407,11 +407,10 @@ void RgbdCamera3::Impl::OutputPoseVector(
 
 void RgbdCamera3::Impl::UpdateModelPoses(
     const QueryHandle<double>& query_handle) const {
-  const auto& context = geometry_.get_current_context(query_handle);
-  const auto& state = context.get_geometry_state();
+  const auto& state = geometry_.GetCurrentState(query_handle);
 
   // Updates body poses.
-  for (const auto& pair : state.get_geometries()) {
+  for (const auto& pair : geometry_.GetGeometries(state)) {
     const InternalGeometry& geometry = pair.second;
 
     auto& X_WV = state.get_pose_in_world(geometry.get_id());

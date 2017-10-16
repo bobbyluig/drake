@@ -437,16 +437,24 @@ class GeometrySystem : public systems::LeafSystem<T> {
 
   //@}
 
-  /* Used by RgbdCamera3. */
-  // TODO(bobbyluig): Find a better way to do this.
+  /* Queries used by RgbdCamera3. */
+  const std::unordered_map<GeometryId, internal::InternalGeometry>&
+  GetGeometries(const GeometryState<T>& state) const {
+    return state.geometries_;
+  };
 
-  const GeometryState<T>& get_initial_state() const {
+  const std::unordered_map<GeometryId, internal::InternalAnchoredGeometry>&
+  GetAnchoredGeometries(const GeometryState<T>& state) const {
+    return state.anchored_geometries_;
+  };
+
+  const GeometryState<T>& GetInitialState() const {
     return *initial_state_;
   }
 
-  const GeometryContext<T>& get_current_context(
-      const QueryHandle<T>& handle) const {
-    return static_cast<const GeometryContext<T>&>(*handle.context_);
+  const GeometryState<T>& GetCurrentState(const QueryHandle<T>& handle) const {
+    auto& context = static_cast<const GeometryContext<T>&>(*handle.context_);
+    return context.get_geometry_state();
   }
 
  private:

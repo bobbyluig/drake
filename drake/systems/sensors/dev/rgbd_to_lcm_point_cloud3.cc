@@ -9,8 +9,7 @@ using robotlocomotion::image_array_t;
 using rendering::PoseVector;
 
 RgbdToPointCloud3::RgbdToPointCloud3(
-    const std::vector<std::shared_ptr<const RgbdCamera3>>& cameras)
-    : cameras_(cameras) {
+    const std::vector<const RgbdCamera3*>& cameras) : cameras_(cameras) {
   for (size_t i = 0; i < cameras_.size(); i++) {
     depth_image_input_indices_.push_back(
         DeclareAbstractInputPort(Value<ImageDepth32F>()).get_index());
@@ -52,7 +51,7 @@ void RgbdToPointCloud3::CalcPointCloudMessage(
     const PoseVector<double>* pose_vector = this->EvalVectorInput<PoseVector>(
         context, pose_vector_input_indices_[i]);
 
-    const RgbdCamera3* camera = cameras_[i].get();
+    const RgbdCamera3* camera = cameras_[i];
     const CameraInfo& camera_info = camera->color_camera_info();
     const Eigen::Isometry3d X_WB = pose_vector->get_isometry();
     const Eigen::Isometry3d X_BC = camera->color_camera_optical_pose();
@@ -61,7 +60,7 @@ void RgbdToPointCloud3::CalcPointCloudMessage(
     Eigen::Matrix3Xf point_cloud;
     RgbdCamera3::DepthImageToPointCloud(depth_image, camera_info, &point_cloud);
 
-    for (int k = 0; k < point_cloud.cols(); k++) {
+    for (int k = 0; k < point_cloud.cols(); k += 3) {
       const auto& point = point_cloud.col(k);
       if (!std::isnan(point(0)) && !std::isinf(point(0))) {
         Eigen::Vector3f point_W = X_WC * point;
@@ -70,6 +69,7 @@ void RgbdToPointCloud3::CalcPointCloudMessage(
         });
       }
     }
+
   }
 
   message.n_points = (int32_t) message.points.size();

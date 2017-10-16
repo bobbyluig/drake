@@ -1,12 +1,10 @@
 #include "drake/examples/geometry_world/solar_system.h"
-#include "drake/geometry/geometry_system.h"
 #include "drake/geometry/geometry_visualization.h"
 #include "drake/lcm/drake_lcm.h"
 #include "drake/lcmt_viewer_draw.hpp"
 #include "drake/systems/analysis/simulator.h"
 #include "drake/systems/framework/diagram_builder.h"
 #include "drake/systems/lcm/lcm_publisher_system.h"
-#include "drake/systems/lcm/serializer.h"
 #include "drake/systems/rendering/pose_bundle_to_draw_message.h"
 #include "drake/systems/sensors/dev/rgbd_camera_3.h"
 #include "drake/systems/sensors/dev/rgbd_to_lcm_point_cloud3.h"
@@ -42,7 +40,7 @@ int do_main() {
       builder.template AddSystem<LcmPublisherSystem>(
           "DRAKE_VIEWER_DRAW",
           std::make_unique<Serializer<drake::lcmt_viewer_draw>>(), &lcm);
-  publisher->set_publish_period(1 / 30.0);
+  publisher->set_publish_period(1 / 60.0);
 
   builder.Connect(
       solar_system->get_geometry_id_output_port(),
@@ -74,9 +72,7 @@ int do_main() {
       depth_range_near, depth_range_far, fov_y
   );
 
-  std::vector<std::shared_ptr<const RgbdCamera3>> cameras =
-      {std::shared_ptr<const RgbdCamera3>(camera1),
-       std::shared_ptr<const RgbdCamera3>(camera2)};
+  std::vector<const RgbdCamera3*> cameras = {camera1, camera2};
 
   auto rgbd_to_point_cloud = builder.AddSystem<RgbdToPointCloud3>(cameras);
   auto point_cloud_lcm_publisher = builder.AddSystem(
@@ -131,7 +127,6 @@ int do_main() {
   auto diagram = builder.Build();
 
   systems::Simulator<double> simulator(*diagram);
-
   simulator.get_mutable_integrator()->set_maximum_step_size(0.002);
   simulator.set_publish_every_time_step(false);
   simulator.set_target_realtime_rate(1);
