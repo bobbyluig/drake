@@ -60,7 +60,7 @@ void RgbdToPointCloud3::CalcPointCloudMessage(
     Eigen::Matrix3Xf point_cloud;
     RgbdCamera3::DepthImageToPointCloud(depth_image, camera_info, &point_cloud);
 
-    for (int k = 0; k < point_cloud.cols(); k += 3) {
+    for (int k = 0; k < point_cloud.cols(); k++) {
       const auto& point = point_cloud.col(k);
       if (!std::isnan(point(0)) && !std::isinf(point(0))) {
         Eigen::Vector3f point_W = X_WC * point;

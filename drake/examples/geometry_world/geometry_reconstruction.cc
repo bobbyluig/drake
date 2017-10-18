@@ -9,6 +9,7 @@
 #include "drake/systems/sensors/dev/rgbd_camera_3.h"
 #include "drake/systems/sensors/dev/rgbd_to_lcm_point_cloud3.h"
 #include "external/lcmtypes_bot2_core/lcmtypes/bot_core/pointcloud_t.hpp"
+#include "drake/systems/sensors/dev/image_noiser.h"
 
 namespace drake {
 namespace examples {
@@ -23,6 +24,7 @@ using systems::lcm::LcmPublisherSystem;
 using systems::lcm::Serializer;
 using systems::sensors::RgbdCamera3;
 using systems::sensors::RgbdToPointCloud3;
+using systems::sensors::ImageNoiser;
 
 int do_main() {
   systems::DiagramBuilder<double> builder;
@@ -65,14 +67,16 @@ int do_main() {
       depth_range_near, depth_range_far, fov_y
   );
 
+  /*
   Eigen::Vector3d pos2 = Eigen::Vector3d(10, 0, 0);
   Eigen::Vector3d rpy2 = Eigen::Vector3d(0, 0, M_PI);
   auto camera2 = builder.AddSystem<RgbdCamera3>(
       "camera2", *geometry_system, pos2, rpy2,
       depth_range_near, depth_range_far, fov_y
   );
+   */
 
-  std::vector<const RgbdCamera3*> cameras = {camera1, camera2};
+  std::vector<const RgbdCamera3*> cameras = {camera1};
 
   auto rgbd_to_point_cloud = builder.AddSystem<RgbdToPointCloud3>(cameras);
   auto point_cloud_lcm_publisher = builder.AddSystem(
@@ -81,20 +85,30 @@ int do_main() {
       )
   );
 
+  auto noiser1 = builder.AddSystem<ImageNoiser>(
+      camera1->color_camera_info(), 0.0, 0.01
+  );
+
   /// Connect query to camera.
   builder.Connect(
       geometry_system->get_query_output_port(),
       camera1->query_handle_input_port()
   );
 
+  /*
   builder.Connect(
       geometry_system->get_query_output_port(),
       camera2->query_handle_input_port()
   );
+   */
 
   // Connect camera to point cloud.
   builder.Connect(
       camera1->depth_image_output_port(),
+      noiser1->depth_image_input_port()
+  );
+  builder.Connect(
+      noiser1->depth_image_output_port(),
       rgbd_to_point_cloud->depth_image_input_port(0)
   );
   builder.Connect(
@@ -102,6 +116,7 @@ int do_main() {
       rgbd_to_point_cloud->pose_vector_input_port(0)
   );
 
+  /*
   builder.Connect(
       camera2->depth_image_output_port(),
       rgbd_to_point_cloud->depth_image_input_port(1)
@@ -110,6 +125,7 @@ int do_main() {
       camera2->camera_base_pose_output_port(),
       rgbd_to_point_cloud->pose_vector_input_port(1)
   );
+   */
 
   // Connect point cloud to publisher.
   builder.Connect(
@@ -117,7 +133,7 @@ int do_main() {
       point_cloud_lcm_publisher->get_input_port(0)
   );
 
-   // Set publish rates
+  // Set publish rates
   point_cloud_lcm_publisher->set_publish_period(1.0 / 30.0);
 
   // Last thing before building the diagram; dispatch the message to load

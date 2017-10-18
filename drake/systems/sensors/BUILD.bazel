@@ -368,10 +368,10 @@ drake_cc_library(
     hdrs = ["dev/rgbd_to_lcm_point_cloud2.h"],
     deps = [
         ":rgbd_camera_2",
+        "//drake/systems/framework",
         "@eigen",
         "@lcmtypes_bot2_core",
         "@lcmtypes_robotlocomotion",
-        "@zlib",
     ],
 )
 
@@ -381,10 +381,22 @@ drake_cc_library(
     hdrs = ["dev/rgbd_to_lcm_point_cloud3.h"],
     deps = [
         ":rgbd_camera_3",
+        "//drake/systems/framework",
         "@eigen",
         "@lcmtypes_bot2_core",
         "@lcmtypes_robotlocomotion",
-        "@zlib",
+    ],
+)
+
+drake_cc_library(
+    name = "image_noiser",
+    srcs = ["dev/image_noiser.cc"],
+    hdrs = ["dev/image_noiser.h"],
+    deps = [
+        ":camera_info",
+        ":image",
+        "//drake/systems/framework",
+        "@eigen",
     ],
 )
 
