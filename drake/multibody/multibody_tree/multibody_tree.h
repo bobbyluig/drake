@@ -803,7 +803,7 @@ class MultibodyTree {
   ///   applied forces. To apply non-zero forces, `Fapplied_Bo_W_array` must be
   ///   of size equal to the number of bodies in `this` %MultibodyTree model.
   ///   This array must be ordered by BodyNodeIndex, which for a given body can
-  ///   be retrieved with Body::get_node_index().
+  ///   be retrieved with Body::ge t_node_index().
   ///   This method will abort if provided with an array that does not have a
   ///   size of either `get_num_bodies()` or zero.
   /// @param[in] tau_applied_array

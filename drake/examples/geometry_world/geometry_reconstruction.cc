@@ -86,7 +86,7 @@ int do_main() {
   );
 
   auto noiser1 = builder.AddSystem<ImageNoiser>(
-      camera1->color_camera_info(), 0.0, 0.01
+      camera1->color_camera_info(), 0.0, 0.02
   );
 
   /// Connect query to camera.
