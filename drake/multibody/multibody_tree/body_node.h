@@ -777,6 +777,13 @@ class BodyNode : public MultibodyTreeElement<BodyNode<T>, BodyNodeIndex> {
     if (tau_applied.size() != 0) tau -= tau_applied;
   }
 
+  // Forward dynamics computation for
+  void CalcArticulatedBodyInertia_TipToBase(
+
+  ) {
+
+  }
+
   /// Returns the topology information for this body node.
   const BodyNodeTopology& get_topology() const { return topology_; }
 
