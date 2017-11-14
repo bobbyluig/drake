@@ -394,6 +394,16 @@ void MultibodyTree<T>::MapVelocityToQDot(
 }
 
 template <typename T>
+void CalcForwardDynamics(
+    const systems::Context<T>& context,
+    const PositionKinematicsCache<T>& pc,
+    const VelocityKinematicsCache<T>& vc,
+    const std::vector<SpatialForce<T>>& Fapplied_Bo_W_array
+) const {
+
+}
+
+template <typename T>
 void MultibodyTree<T>::CalcMassMatrixViaInverseDynamics(
     const systems::Context<T>& context,
     const PositionKinematicsCache<T>& pc,

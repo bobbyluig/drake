@@ -16,12 +16,14 @@
 #include "drake/multibody/multibody_tree/position_kinematics_cache.h"
 #include "drake/multibody/multibody_tree/spatial_inertia.h"
 #include "drake/multibody/multibody_tree/velocity_kinematics_cache.h"
+#include "drake/multibody/multibody_tree/articulated_body_cache.h"
 
 namespace drake {
 namespace multibody {
 
 // Forward declaration.
-template<typename T> class MultibodyTree;
+template<typename T>
+class MultibodyTree;
 
 namespace internal {
 
@@ -92,7 +94,7 @@ namespace internal {
 ///                algorithms. Springer Science & Business Media.
 ///
 /// @tparam T The scalar type. Must be a valid Eigen scalar.
-template <typename T>
+template<typename T>
 class BodyNode : public MultibodyTreeElement<BodyNode<T>, BodyNodeIndex> {
  public:
   DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN(BodyNode)
@@ -625,7 +627,7 @@ class BodyNode : public MultibodyTreeElement<BodyNode<T>, BodyNodeIndex> {
     std::vector<SpatialForce<T>>& F_BMo_W_array = *F_BMo_W_array_ptr;
     DRAKE_DEMAND(
         tau_applied.size() == get_num_mobilizer_velocites() ||
-        tau_applied.size() == 0);
+            tau_applied.size() == 0);
     DRAKE_DEMAND(tau_array != nullptr);
     DRAKE_DEMAND(tau_array->size() ==
         this->get_parent_tree().get_num_velocities());
@@ -777,10 +779,49 @@ class BodyNode : public MultibodyTreeElement<BodyNode<T>, BodyNodeIndex> {
     if (tau_applied.size() != 0) tau -= tau_applied;
   }
 
-  // Forward dynamics computation for
-  void CalcArticulatedBodyInertia_TipToBase(
+  // Rigid body transformation matrix.
+  // See [Jain 2010, Eq. 1.31]
+  // TODO(bobbyluig): Pretty sure R is orthogonal, but check.
+  const Matrix6<T> CalcRigidBodyTransform(const Isometry3<T>& X_FG) const {
+    Matrix6<T> shift_matrix = Matrix6<T>::Zero();
 
+    // Top left and bottom right are R_FG.
+    Matrix3<T> R_FG = X_FG.linear();
+    shift_matrix.block(0, 0, 3, 3) = R_FG;
+    shift_matrix.block(3, 3, 3, 3) = R_FG;
+
+    // Top right is l_FG * R_FG.
+    Vector3<T> p_FG = X_FG.translation();
+    Matrix3<T> l_FG;
+    l_FG << 0, -p_FG(2), p_FG(1),
+            p_FG(2), 0, -p_FG(0),
+            -p_FG(1), p_FG(0), 0;
+    shift_matrix.block(0, 3, 3, 3) = l_FG * R_FG;
+
+    return shift_matrix;
+  }
+
+  // Forward dynamics computation.
+  void CalcArticulatedBodyInertia_TipToBase(
+      const MultibodyTreeContext<T>& context,
+      const PositionKinematicsCache<T>& pc,
+      const VelocityKinematicsCache<T>& vc,
+      const std::vector<SpatialForce<T>>& F_Bo_W_array,
+      const ArticulatedBodyCache<T>& abc
   ) {
+    // Body for this node.
+    const Body<T>& body_B = get_body();
+
+    // Compute P_B.
+    SpatialInertia M_B = body_B.CalcSpatialInertiaInBodyFrame(context);
+    Matrix6<T> P_B = M_B.CopyToFullMatrix6();
+
+    for (int i = 0; i < children_.size(); i++) {
+      const BodyNode<T>* C = children_[i];
+      const Matrix6<T> phi_BC = C->CalcRigidBodyTransform(C->get_X_PB(pc));
+      P_B += phi_BC * abc.get_P_plus(C->get_index()) * phi_BC.transpose();
+    }
+
 
   }
 
@@ -807,7 +848,7 @@ class BodyNode : public MultibodyTreeElement<BodyNode<T>, BodyNodeIndex> {
   // For the root node, corresponding to the world body, this method returns an
   // invalid body index. Attempts to using invalid indexes leads to an exception
   // being thrown in Debug builds.
-  BodyIndex get_parent_body_index() const { return topology_.parent_body;}
+  BodyIndex get_parent_body_index() const { return topology_.parent_body; }
 
   // =========================================================================
   // Helpers to access the state.
@@ -995,7 +1036,7 @@ class BodyNode : public MultibodyTreeElement<BodyNode<T>, BodyNodeIndex> {
       EigenPtr<VectorX<T>> v) const {
     DRAKE_ASSERT(v != nullptr);
     return v->segment(topology_.mobilizer_velocities_start_in_v,
-                     topology_.num_mobilizer_velocities);
+                      topology_.num_mobilizer_velocities);
   }
 
   // Helper to get an Eigen expression of the vector of generalized forces
@@ -1113,10 +1154,10 @@ class BodyNode : public MultibodyTreeElement<BodyNode<T>, BodyNodeIndex> {
   //   2. b_Bo = 0 when w_WB = 0.
   //   3. b_Bo.translational() = 0 when Bo = Bcm (p_BoBcm = 0).
   void CalcBodySpatialForceGivenItsSpatialAcceleration(
-      const MultibodyTreeContext<T> &context,
-      const PositionKinematicsCache<T> &pc,
-      const VelocityKinematicsCache<T> &vc,
-      const SpatialAcceleration<T> &A_WB, SpatialForce<T> *Ftot_BBo_W_ptr)
+      const MultibodyTreeContext<T>& context,
+      const PositionKinematicsCache<T>& pc,
+      const VelocityKinematicsCache<T>& vc,
+      const SpatialAcceleration<T>& A_WB, SpatialForce<T>* Ftot_BBo_W_ptr)
   const {
     DRAKE_DEMAND(Ftot_BBo_W_ptr != nullptr);
     // TODO(amcastro-tri): add argument for flexible body generalized

@@ -67,16 +67,15 @@ class ArticulatedBodyCache {
     z_plus_pool_[world_index()] = Vector6<T>::Zero();
 
     g_pool_.resize(static_cast<unsigned long>(num_nodes_));
-    // TODO(bobbyluig): Kalman gain is not defined, set to NaN.
+    // TODO(bobbyluig): Kalman gain for world is not defined, set to NaN.
   }
-
 
   int num_nodes_{0};
 
   // Pool names are directly from [Jain 2010, Algorithm 7.2].
-  Matrix6_PoolType P_plus_pool_;
-  Vector6_PoolType z_plus_pool_;
-  Matrix6X_PoolType g_pool_;
+  Matrix6_PoolType P_plus_pool_{};
+  Vector6_PoolType z_plus_pool_{};
+  Matrix6X_PoolType g_pool_{};
 };
 
 }  // namespace multibody

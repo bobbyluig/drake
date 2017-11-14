@@ -852,6 +852,14 @@ class MultibodyTree {
       const Eigen::Ref<const VectorX<T>>& v,
       EigenPtr<VectorX<T>> qdot) const;
 
+  /// Compute forward dynamics using the Articulate Body Algorithm.
+  void CalcForwardDynamics(
+      const systems::Context<T>& context,
+      const PositionKinematicsCache<T>& pc,
+      const VelocityKinematicsCache<T>& vc,
+      const std::vector<SpatialForce<T>>& Fapplied_Bo_W_array
+  ) const;
+
   /// @name Methods to retrieve multibody element variants
   ///
   /// Given two variants of the same %MultibodyTree, these methods map an
