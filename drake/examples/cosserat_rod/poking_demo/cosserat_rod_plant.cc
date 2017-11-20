@@ -570,6 +570,10 @@ void CosseratRodPlant<T>::DoCalcTimeDerivatives(
     PRINT_VAR(F);
   }
 
+  // TESTING
+  model_.CalcForwardDynamics(context, pc, vc, Fapplied_Bo_W_array, tau);
+  // TESTING
+
   VectorX<T> C(nv);
   model_.CalcBiasTerm(context, pc, vc, Fapplied_Bo_W_array, &C);
 

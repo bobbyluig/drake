@@ -416,6 +416,8 @@ class Mobilizer : public MultibodyTreeElement<Mobilizer<T>, MobilizerIndex> {
       EigenPtr<VectorX<T>> v) const = 0;
   /// @}
 
+  virtual const Matrix6X<T> GetHingeMap() const = 0;
+
   /// Returns a const Eigen expression of the vector of generalized positions
   /// for `this` mobilizer from a vector `q_array` of generalized positions for
   /// the entire MultibodyTree model.

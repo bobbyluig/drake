@@ -64,6 +64,10 @@ class RevoluteMobilizer final : public MobilizerImpl<T, 1, 1> {
     // don't get spurious exceptions when, for instance, the provided axis comes
     // from parsing a file. Therefore we re-normalize here.
     axis_F_.normalize();
+
+    hinge_map_.resize(6, 1);
+    hinge_map_.setZero();
+    hinge_map_.block(0, 0, 3, 1) = axis_F_;
   }
 
   /// @retval axis_F The rotation axis as a unit vector expressed in the inboard
@@ -165,6 +169,10 @@ class RevoluteMobilizer final : public MobilizerImpl<T, 1, 1> {
       const Eigen::Ref<const VectorX<T>>& qdot,
       EigenPtr<VectorX<T>> v) const override;
 
+  const Matrix6X<T> GetHingeMap() const override {
+    return hinge_map_;
+  };
+
  protected:
   std::unique_ptr<Mobilizer<double>> DoCloneToScalar(
       const MultibodyTree<double>& tree_clone) const override;
@@ -190,6 +198,7 @@ class RevoluteMobilizer final : public MobilizerImpl<T, 1, 1> {
 
   // Default joint axis expressed in the inboard frame F.
   Vector3<double> axis_F_;
+  Matrix6X<T> hinge_map_;
 };
 
 }  // namespace multibody

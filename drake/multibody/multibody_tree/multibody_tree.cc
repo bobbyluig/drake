@@ -394,13 +394,44 @@ void MultibodyTree<T>::MapVelocityToQDot(
 }
 
 template <typename T>
-void CalcForwardDynamics(
+void MultibodyTree<T>::CalcForwardDynamics(
     const systems::Context<T>& context,
     const PositionKinematicsCache<T>& pc,
     const VelocityKinematicsCache<T>& vc,
-    const std::vector<SpatialForce<T>>& Fapplied_Bo_W_array
+    const std::vector<SpatialForce<T>>& Fapplied_Bo_W_array,
+    const Eigen::Ref<const VectorX<T>>& tau_applied_array
 ) const {
+  const int Fapplied_size = (int) (Fapplied_Bo_W_array.size());
+  const int tau_array_size = (int) (tau_applied_array.size());
 
+  VectorX<T> tau_applied_mobilizer(0);
+  SpatialForce<T> Fapplied_Bo_W = SpatialForce<T>::Zero();
+
+  const auto& mbt_context =
+      dynamic_cast<const MultibodyTreeContext<T>&>(context);
+
+  ArticulatedBodyCache<T> abc = ArticulatedBodyCache<T>(topology_);
+
+  for (int depth = get_tree_height() - 1; depth >= 0; depth--) {
+    for (BodyNodeIndex body_node_index : body_node_levels_[depth]) {
+      const BodyNode<T>& node = *body_nodes_[body_node_index];
+
+      DRAKE_ASSERT(node.get_topology().level == depth);
+      DRAKE_ASSERT(node.get_index() == body_node_index);
+
+      if (tau_array_size != 0) {
+        tau_applied_mobilizer = node.get_mobilizer()
+            .get_generalized_forces_from_array(tau_applied_array);
+      }
+      if (Fapplied_size != 0) {
+        Fapplied_Bo_W = Fapplied_Bo_W_array[body_node_index];
+      }
+
+      node.CalcForwardDynamics_TipToBase(
+          mbt_context, pc, vc, Fapplied_Bo_W, tau_applied_mobilizer, abc
+      );
+    }
+  }
 }
 
 template <typename T>

@@ -196,6 +196,9 @@ class RollPitchYawMobilizer final : public MobilizerImpl<T, 3, 3> {
       const Eigen::Ref<const VectorX<T>>& qdot,
       EigenPtr<VectorX<T>> v) const override;
 
+  const Matrix6X<T> GetHingeMap() const override {
+    return Matrix6<T>::Identity();
+  };
 
  protected:
   std::unique_ptr<Mobilizer<double>> DoCloneToScalar(
