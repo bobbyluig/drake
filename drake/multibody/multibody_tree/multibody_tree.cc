@@ -412,12 +412,9 @@ void MultibodyTree<T>::CalcForwardDynamics(
 
   ArticulatedBodyCache<T> abc = ArticulatedBodyCache<T>(topology_);
 
-  for (int depth = get_tree_height() - 1; depth >= 0; depth--) {
+  for (int depth = get_tree_height() - 1; depth >= 1; depth--) {
     for (BodyNodeIndex body_node_index : body_node_levels_[depth]) {
       const BodyNode<T>& node = *body_nodes_[body_node_index];
-
-      DRAKE_ASSERT(node.get_topology().level == depth);
-      DRAKE_ASSERT(node.get_index() == body_node_index);
 
       if (tau_array_size != 0) {
         tau_applied_mobilizer = node.get_mobilizer()
@@ -429,6 +426,16 @@ void MultibodyTree<T>::CalcForwardDynamics(
 
       node.CalcForwardDynamics_TipToBase(
           mbt_context, pc, vc, Fapplied_Bo_W, tau_applied_mobilizer, abc
+      );
+    }
+  }
+
+  for (int depth = 1; depth < get_tree_height(); depth++) {
+    for (BodyNodeIndex body_node_index : body_node_levels_[depth]) {
+      const BodyNode<T>& node = *body_nodes_[body_node_index];
+
+      node.CalcGeneralizedAcceleration_BaseToTip(
+          mbt_context, pc, vc, abc
       );
     }
   }

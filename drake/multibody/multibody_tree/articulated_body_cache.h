@@ -24,58 +24,93 @@ class ArticulatedBodyCache {
     Allocate();
   }
 
-  const Matrix6<T>& get_P_plus(BodyNodeIndex body_node_index) const {
+  const Matrix6<T>& get_P_B(BodyNodeIndex body_node_index) const {
     DRAKE_ASSERT(0 <= body_node_index && body_node_index < num_nodes_);
-    return P_plus_pool_[body_node_index];
+    return P_B_pool_[body_node_index];
   }
 
-  Matrix6<T>& get_mutable_P_plus(BodyNodeIndex body_node_index) {
+  Matrix6<T>& get_mutable_P_B(BodyNodeIndex body_node_index) {
     DRAKE_ASSERT(0 <= body_node_index && body_node_index < num_nodes_);
-    return P_plus_pool_[body_node_index];
+    return P_B_pool_[body_node_index];
   }
 
-  const Vector6<T>& get_z_plus(BodyNodeIndex body_node_index) const {
+  const Vector6<T>& get_z_B(BodyNodeIndex body_node_index) const {
     DRAKE_ASSERT(0 <= body_node_index && body_node_index < num_nodes_);
-    return z_plus_pool_[body_node_index];
+    return z_B_pool_[body_node_index];
   }
 
-  Vector6<T>& get_mutable_z_plus(BodyNodeIndex body_node_index) {
+  Vector6<T>& get_mutable_z_B(BodyNodeIndex body_node_index) {
     DRAKE_ASSERT(0 <= body_node_index && body_node_index < num_nodes_);
-    return z_plus_pool_[body_node_index];
+    return z_B_pool_[body_node_index];
   }
 
-  const Matrix6X<T>& get_g(BodyNodeIndex body_node_index) const {
+  const Matrix6X<T>& get_g_M(BodyNodeIndex body_node_index) const {
     DRAKE_ASSERT(0 <= body_node_index && body_node_index < num_nodes_);
-    return g_pool_[body_node_index];
+    return g_M_pool_[body_node_index];
   }
 
-  Matrix6X<T>& get_mutable_g(BodyNodeIndex body_node_index) {
+  Matrix6X<T>& get_mutable_g_M(BodyNodeIndex body_node_index) {
     DRAKE_ASSERT(0 <= body_node_index && body_node_index < num_nodes_);
-    return g_pool_[body_node_index];
+    return g_M_pool_[body_node_index];
+  }
+
+  const Vector6<T>& get_a_B(BodyNodeIndex body_node_index) const {
+    DRAKE_ASSERT(0 <= body_node_index && body_node_index < num_nodes_);
+    return a_B_pool_[body_node_index];
+  }
+
+  Vector6<T>& get_mutable_a_B(BodyNodeIndex body_node_index) {
+    DRAKE_ASSERT(0 <= body_node_index && body_node_index < num_nodes_);
+    return a_B_pool_[body_node_index];
+  }
+
+  const VectorX<T>& get_v_M(BodyNodeIndex body_node_index) const {
+    DRAKE_ASSERT(0 <= body_node_index && body_node_index < num_nodes_);
+    return v_M_pool_[body_node_index];
+  }
+
+  VectorX<T>& get_mutable_v_M(BodyNodeIndex body_node_index) {
+    DRAKE_ASSERT(0 <= body_node_index && body_node_index < num_nodes_);
+    return v_M_pool_[body_node_index];
+  }
+
+  const Vector6<T>& get_alpha_B(BodyNodeIndex body_node_index) const {
+    DRAKE_ASSERT(0 <= body_node_index && body_node_index < num_nodes_);
+    return alpha_B_pool_[body_node_index];
+  }
+
+  Vector6<T>& get_mutable_alpha_B(BodyNodeIndex body_node_index) {
+    DRAKE_ASSERT(0 <= body_node_index && body_node_index < num_nodes_);
+    return alpha_B_pool_[body_node_index];
   }
 
  private:
   typedef std::vector<Matrix6<T>> Matrix6_PoolType;
   typedef std::vector<Matrix6X<T>> Matrix6X_PoolType;
   typedef std::vector<Vector6<T>> Vector6_PoolType;
+  typedef std::vector<VectorX<T>> VectorX_PoolType;
 
   void Allocate() {
-    P_plus_pool_.resize(static_cast<unsigned long>(num_nodes_));
-    P_plus_pool_[world_index()] = Matrix6<T>::Zero();
+    P_B_pool_.resize(static_cast<unsigned long>(num_nodes_));
+    z_B_pool_.resize(static_cast<unsigned long>(num_nodes_));
+    g_M_pool_.resize(static_cast<unsigned long>(num_nodes_));
+    a_B_pool_.resize(static_cast<unsigned long>(num_nodes_));
+    v_M_pool_.resize(static_cast<unsigned long>(num_nodes_));
+    alpha_B_pool_.resize(static_cast<unsigned long>(num_nodes_));
 
-    z_plus_pool_.resize(static_cast<unsigned long>(num_nodes_));
-    z_plus_pool_[world_index()] = Vector6<T>::Zero();
-
-    g_pool_.resize(static_cast<unsigned long>(num_nodes_));
-    // TODO(bobbyluig): Kalman gain for world is not defined, set to NaN.
+    // a_B for world is zero.
+    alpha_B_pool_[world_index()] = Vector6<T>::Zero();
   }
 
   int num_nodes_{0};
 
   // Pool names are directly from [Jain 2010, Algorithm 7.2].
-  Matrix6_PoolType P_plus_pool_{};
-  Vector6_PoolType z_plus_pool_{};
-  Matrix6X_PoolType g_pool_{};
+  Matrix6_PoolType P_B_pool_{};
+  Vector6_PoolType z_B_pool_{};
+  Matrix6X_PoolType g_M_pool_{};
+  Vector6_PoolType a_B_pool_{};
+  VectorX_PoolType v_M_pool_{};
+  Vector6_PoolType alpha_B_pool_{};
 };
 
 }  // namespace multibody

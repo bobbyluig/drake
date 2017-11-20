@@ -842,7 +842,7 @@ class BodyNode : public MultibodyTreeElement<BodyNode<T>, BodyNodeIndex> {
     // Add contribution to P_B of all children.
     for (const BodyNode<T>* child : children_) {
       const Matrix6<T> phi_BC = CalcPhi(child->get_X_PB(pc));
-      P_B += phi_BC * abc.get_P_plus(child->get_index()) * phi_BC.transpose();
+      P_B += phi_BC * abc.get_P_B(child->get_index()) * phi_BC.transpose();
     }
 
     // Compute phi for BM and MB.
@@ -855,17 +855,17 @@ class BodyNode : public MultibodyTreeElement<BodyNode<T>, BodyNodeIndex> {
     Matrix6<T> P_M = phi_MB * P_B * phi_MB.transpose();
 
     // Get hinge map and compute D, g, tau_bar in M frame.
-    Matrix6X<T> H_M = get_mobilizer().GetHingeMap();
+    const Matrix6X<T> H_M = get_mobilizer().GetHingeMap();
     MatrixX<T> D_M = H_M.transpose() * P_M * H_M;
     MatrixX<T> D_M_inv = D_M.inverse();
     Matrix6X<T> g_M = P_M * H_M * D_M_inv;
     Matrix6<T> tau_bar_M = Matrix6<T>::Identity() - g_M * H_M.transpose();
 
     // Cache g_M.
-    abc.get_mutable_g(topology_.index) = g_M;
+    abc.get_mutable_g_M(topology_.index) = g_M;
 
     // Compute P_plus_B.
-    abc.get_mutable_P_plus(topology_.index) =
+    abc.get_mutable_P_B(topology_.index) =
         phi_BM * (tau_bar_M * P_M) * phi_BM.transpose();
 
     // Move spatial velocity to B frame.
@@ -882,13 +882,16 @@ class BodyNode : public MultibodyTreeElement<BodyNode<T>, BodyNodeIndex> {
     Vector6<T> a_B = SpatialSkew(V_B) * phi_MB.transpose() * dv_M;
     a_B -= SpatialBar(dv_M) * dv_M;
 
+    // Cache a_B.
+    abc.get_mutable_a_B(topology_.index) = a_B;
+
     // Compute z_B.
     Vector6<T> z_B = P_B * a_B + b_B;
 
     // Add contribution to z_B of all children.
     for (const BodyNode<T>* child : children_) {
       const Matrix6<T> phi_BC = CalcPhi(child->get_X_PB(pc));
-      z_B += phi_BC * abc.get_z_plus(child->get_index());
+      z_B += phi_BC * abc.get_z_B(child->get_index());
     }
 
     // Move force into B frame and include contribution.
@@ -906,10 +909,47 @@ class BodyNode : public MultibodyTreeElement<BodyNode<T>, BodyNodeIndex> {
     }
 
     // Compute v_M.
-    VectorX<T> v_M = D_M_inv * e_M;
+    abc.get_mutable_v_M(topology_.index) = D_M_inv * e_M;
 
     // Compute z_plus_B.
-    abc.get_mutable_z_plus(topology_.index) = phi_BM * (z_M + g_M * e_M);
+    abc.get_mutable_z_B(topology_.index) = phi_BM * (z_M + g_M * e_M);
+  }
+
+  void CalcGeneralizedAcceleration_BaseToTip(
+      const MultibodyTreeContext<T>& context,
+      const PositionKinematicsCache<T>& pc,
+      const VelocityKinematicsCache<T>& vc,
+      ArticulatedBodyCache<T>& abc
+  ) const {
+    // Compute phi_PB.
+    Matrix6<T> phi_PB = CalcPhi(get_X_PB(pc));
+
+    // Compute a_plus_B.
+    Vector6<T> alpha_plus_B =
+        phi_PB.transpose() * abc.get_alpha_B(parent_node_->get_index());
+
+    // Compute phi for BM and MB.
+    const Frame<T>& frame_M = get_outboard_frame();
+    Isometry3<T> X_BM = frame_M.CalcPoseInBodyFrame(context);
+    Matrix6<T> phi_BM = CalcPhi(X_BM);
+    Matrix6<T> phi_MB = CalcPhi(X_BM.inverse());
+
+    // Shift alpha_plus_B to alpha_plus_M.
+    Vector6<T> alpha_plus_M = phi_BM.transpose() * alpha_plus_B;
+
+    // Compute theta_ddot.
+    // Note that gravity is already included in the force element.
+    const VectorX<T> v_M = abc.get_v_M(topology_.index);
+    const Matrix6X<T> g_M = abc.get_g_M(topology_.index);
+    VectorX<T> theta_ddot = v_M - g_M.transpose() * alpha_plus_M;
+
+    // Get hinge map.
+    const Matrix6X<T> H_M = get_mobilizer().GetHingeMap();
+
+    // Compute alpha_B.
+    const Vector6<T> a_B = abc.get_a_B(topology_.index);
+    abc.get_mutable_alpha_B(topology_.index) =
+        alpha_plus_B + phi_MB.transpose() * (H_M * theta_ddot) + a_B;
   }
 
   /// Returns the topology information for this body node.
