@@ -399,8 +399,12 @@ void MultibodyTree<T>::CalcForwardDynamics(
     const PositionKinematicsCache<T>& pc,
     const VelocityKinematicsCache<T>& vc,
     const std::vector<SpatialForce<T>>& Fapplied_Bo_W_array,
-    const Eigen::Ref<const VectorX<T>>& tau_applied_array
+    const Eigen::Ref<const VectorX<T>>& tau_applied_array,
+    EigenPtr<VectorX<T>> qddot
 ) const {
+  DRAKE_DEMAND(qddot != nullptr);
+  DRAKE_DEMAND(qddot->size() == get_num_velocities());
+
   const int Fapplied_size = (int) (Fapplied_Bo_W_array.size());
   const int tau_array_size = (int) (tau_applied_array.size());
 
@@ -435,7 +439,7 @@ void MultibodyTree<T>::CalcForwardDynamics(
       const BodyNode<T>& node = *body_nodes_[body_node_index];
 
       node.CalcGeneralizedAcceleration_BaseToTip(
-          mbt_context, pc, vc, abc
+          mbt_context, pc, vc, abc, qddot
       );
     }
   }

@@ -858,7 +858,8 @@ class MultibodyTree {
       const PositionKinematicsCache<T>& pc,
       const VelocityKinematicsCache<T>& vc,
       const std::vector<SpatialForce<T>>& Fapplied_Bo_W_array,
-      const Eigen::Ref<const VectorX<T>>& tau_applied_array
+      const Eigen::Ref<const VectorX<T>>& tau_applied_array,
+      EigenPtr<VectorX<T>> qddot
   ) const;
 
   /// @name Methods to retrieve multibody element variants

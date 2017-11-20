@@ -570,10 +570,6 @@ void CosseratRodPlant<T>::DoCalcTimeDerivatives(
     PRINT_VAR(F);
   }
 
-  // TESTING
-  model_.CalcForwardDynamics(context, pc, vc, Fapplied_Bo_W_array, tau);
-  // TESTING
-
   VectorX<T> C(nv);
   model_.CalcBiasTerm(context, pc, vc, Fapplied_Bo_W_array, &C);
 
@@ -591,7 +587,15 @@ void CosseratRodPlant<T>::DoCalcTimeDerivatives(
   // mobilizers.
   //Eigen::LLT<MatrixX<T>> solver(M);
 
-  xdot << qdot, M.llt().solve(- C);
+  // TESTING
+  VectorX<T> qddot = VectorX<T>::Zero(nv);
+  model_.CalcForwardDynamics(
+      context, pc, vc, Fapplied_Bo_W_array, tau, &qddot
+  );
+  // TESTING
+
+  // xdot << qdot, M.llt().solve(- C);
+  xdot << qdot, qddot;
   derivatives->SetFromVector(xdot);
 }
 

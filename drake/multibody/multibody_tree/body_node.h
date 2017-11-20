@@ -782,8 +782,8 @@ class BodyNode : public MultibodyTreeElement<BodyNode<T>, BodyNodeIndex> {
   Matrix3<T> VectorSkew(const Vector3<T>& l) const {
     Matrix3<T> l_skew;
     l_skew << 0, -l(2), l(1),
-        l(2), 0, -l(0),
-        -l(1), l(0), 0;
+              l(2), 0, -l(0),
+              -l(1), l(0), 0;
     return l_skew;
   }
 
@@ -901,7 +901,7 @@ class BodyNode : public MultibodyTreeElement<BodyNode<T>, BodyNodeIndex> {
 
     // Compute e_M, ensuring that z_B is shifted to M frame.
     Vector6<T> z_M = phi_MB * z_B;
-    VectorX<T> e_M = -H_M.transpose() * z_M;
+    VectorX<T> e_M = -(H_M.transpose() * z_M);
 
     // Include tau contribution.
     if (tau_applied.size() != 0) {
@@ -919,7 +919,8 @@ class BodyNode : public MultibodyTreeElement<BodyNode<T>, BodyNodeIndex> {
       const MultibodyTreeContext<T>& context,
       const PositionKinematicsCache<T>& pc,
       const VelocityKinematicsCache<T>& vc,
-      ArticulatedBodyCache<T>& abc
+      ArticulatedBodyCache<T>& abc,
+      EigenPtr<VectorX<T>> qddot
   ) const {
     // Compute phi_PB.
     Matrix6<T> phi_PB = CalcPhi(get_X_PB(pc));
@@ -942,6 +943,9 @@ class BodyNode : public MultibodyTreeElement<BodyNode<T>, BodyNodeIndex> {
     const VectorX<T> v_M = abc.get_v_M(topology_.index);
     const Matrix6X<T> g_M = abc.get_g_M(topology_.index);
     VectorX<T> theta_ddot = v_M - g_M.transpose() * alpha_plus_M;
+
+    // Set vdot.
+    get_mutable_velocities_from_array(qddot) = theta_ddot;
 
     // Get hinge map.
     const Matrix6X<T> H_M = get_mobilizer().GetHingeMap();
