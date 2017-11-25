@@ -197,7 +197,9 @@ class RollPitchYawMobilizer final : public MobilizerImpl<T, 3, 3> {
       EigenPtr<VectorX<T>> v) const override;
 
   const Matrix6X<T> GetHingeMap() const override {
-    return Matrix6<T>::Identity();
+    Matrix6X<T> h(6, 3);
+    h << Matrix3<T>::Identity(), Matrix3<T>::Zero();
+    return h;
   };
 
  protected:

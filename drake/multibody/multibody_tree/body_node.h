@@ -823,6 +823,22 @@ class BodyNode : public MultibodyTreeElement<BodyNode<T>, BodyNodeIndex> {
     return shift_matrix;
   }
 
+  Matrix6<T> CalcPhi2(const Isometry3<T>& X_FG) const {
+    Matrix6<T> shift_matrix = Matrix6<T>::Zero();
+
+    // Top left and bottom right are R_FG.
+    Matrix3<T> R_FG = X_FG.linear();
+    shift_matrix.block(0, 0, 3, 3) = R_FG;
+    shift_matrix.block(3, 3, 3, 3) = R_FG;
+
+    // Top right is l_FG * R_FG.
+    Vector3<T> p_FG = X_FG.translation();
+    Matrix3<T> l_FG = VectorSkew(p_FG);
+    shift_matrix.block(3, 0, 3, 3) = l_FG * R_FG;
+
+    return shift_matrix;
+  }
+
   // Forward dynamics computation.
   void CalcForwardDynamics_TipToBase(
       const MultibodyTreeContext<T>& context,
@@ -830,10 +846,35 @@ class BodyNode : public MultibodyTreeElement<BodyNode<T>, BodyNodeIndex> {
       const VelocityKinematicsCache<T>& vc,
       const SpatialForce<T>& Fapplied_Bo_W,
       const Eigen::Ref<const VectorX<T>>& tau_applied,
+      const Eigen::Ref<const VectorX<T>>& qdot,
       ArticulatedBodyCache<T>& abc
   ) const {
     // Body for this node.
     const Body<T>& body_B = get_body();
+
+//    ////////
+//    SpatialVelocity<T> V_WP_W = get_V_WP(vc);
+//    SpatialVelocity<T> V_WP_P = get_X_WP(pc).linear().inverse() * V_WP_W;
+//
+//    SpatialVelocity<T> V_WB_W = get_V_WB(vc);
+//    SpatialVelocity<T> V_WB_B = get_X_WB(pc).linear().inverse() * V_WB_W;
+//    std::cout << V_WB_B.get_coeffs().transpose() << std::endl;
+//
+//    const Frame<T>& frame_M = get_outboard_frame();
+//    Isometry3<T> X_BM = frame_M.CalcPoseInBodyFrame(context);
+//
+//    SpatialVelocity<T> V_FM_F = get_V_FM(vc);
+//    SpatialVelocity<T> V_FM_M = get_X_FM(pc).linear().inverse() * V_FM_F;
+//
+//    const Matrix6X<T> H_B = get_mobilizer().GetHingeMap();
+//    Vector6<T> guess =
+//        CalcPhi2(get_X_PB(pc).inverse()) * V_WP_P.get_coeffs() +
+//            CalcPhi2(X_BM) * (H_B * qdot);
+//    Vector6<T> guess =
+//        CalcPhi2(get_X_PB(pc).inverse()) * V_WP_P.get_coeffs() +
+//            CalcPhi2(X_BM) * V_FM_M.get_coeffs();
+//    std::cout << guess.transpose() << std::endl;
+//    ////////
 
     // Compute P_B.
     SpatialInertia<T> M_B = body_B.CalcSpatialInertiaInBodyFrame(context);
@@ -846,8 +887,8 @@ class BodyNode : public MultibodyTreeElement<BodyNode<T>, BodyNodeIndex> {
     }
 
     // Compute phi for BM and MB.
-    const Frame<T>& frame_M = get_outboard_frame();
-    Isometry3<T> X_BM = frame_M.CalcPoseInBodyFrame(context);
+    // const Frame<T>& frame_M = get_outboard_frame();
+    // Isometry3<T> X_BM = frame_M.CalcPoseInBodyFrame(context);
     Matrix6<T> phi_BM = CalcPhi(X_BM);
     Matrix6<T> phi_MB = CalcPhi(X_BM.inverse());
 

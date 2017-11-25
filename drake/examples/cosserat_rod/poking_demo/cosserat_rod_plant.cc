@@ -590,7 +590,7 @@ void CosseratRodPlant<T>::DoCalcTimeDerivatives(
   // TESTING
   VectorX<T> qddot = VectorX<T>::Zero(nv);
   model_.CalcForwardDynamics(
-      context, pc, vc, Fapplied_Bo_W_array, tau, &qddot
+      context, pc, vc, Fapplied_Bo_W_array, tau, qdot, &qddot
   );
   // TESTING
 
