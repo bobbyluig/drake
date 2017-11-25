@@ -852,9 +852,11 @@ class BodyNode : public MultibodyTreeElement<BodyNode<T>, BodyNodeIndex> {
     // Body for this node.
     const Body<T>& body_B = get_body();
 
-//    ////////
+    ////////
 //    SpatialVelocity<T> V_WP_W = get_V_WP(vc);
 //    SpatialVelocity<T> V_WP_P = get_X_WP(pc).linear().inverse() * V_WP_W;
+//    SpatialVelocity<T> V_WPb_P = V_WP_P.Shift(get_X_PB(pc).translation());
+//    SpatialVelocity<T> V_WPb_B = get_X_PB(pc).linear().inverse() * V_WPb_P;
 //
 //    SpatialVelocity<T> V_WB_W = get_V_WB(vc);
 //    SpatialVelocity<T> V_WB_B = get_X_WB(pc).linear().inverse() * V_WB_W;
@@ -873,8 +875,10 @@ class BodyNode : public MultibodyTreeElement<BodyNode<T>, BodyNodeIndex> {
 //    Vector6<T> guess =
 //        CalcPhi2(get_X_PB(pc).inverse()) * V_WP_P.get_coeffs() +
 //            CalcPhi2(X_BM) * V_FM_M.get_coeffs();
+//    Vector6<T> guess =
+//        V_WPb_B.get_coeffs() + CalcPhi2(X_BM) * V_FM_M.get_coeffs();
 //    std::cout << guess.transpose() << std::endl;
-//    ////////
+    ////////
 
     // Compute P_B.
     SpatialInertia<T> M_B = body_B.CalcSpatialInertiaInBodyFrame(context);
