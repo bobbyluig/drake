@@ -464,11 +464,11 @@ void CosseratRodPlant<T>::DoCalcTimeDerivatives(
   MatrixX<T> M(nv, nv);
   model_.CalcMassMatrixViaInverseDynamics(context, pc, &M);
   // Check if M is symmetric.
-  const T err_sym = (M - M.transpose()).norm();
-  PRINT_VAR(err_sym);
+  // const T err_sym = (M - M.transpose()).norm();
+  // PRINT_VAR(err_sym);
   //DRAKE_DEMAND(err_sym < 1.0e-6);
 
-  PRINT_VARn(M);
+  // PRINT_VARn(M);
 
   VectorX<T> tau = VectorX<T>::Zero(nv);
   model_.CalcForceElementsContribution(

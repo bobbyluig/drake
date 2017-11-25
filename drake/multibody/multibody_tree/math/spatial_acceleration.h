@@ -113,7 +113,7 @@ class SpatialAcceleration : public SpatialVector<SpatialAcceleration, T> {
   ///   a_WBo = a_WPo + alpha_WP x p_PoBo + w_WP x w_WP x p_PoBo
   /// </pre>
   /// where `alpha` and `a` represent the angular and linear acceleration
-  /// components respectively. See notes at the end of this documentation for a
+  /// components respectively. See notes at the end of this documentat  ion for a
   /// detailed derivation.
   ///
   /// For computation, all quantities above must be expressed in a common

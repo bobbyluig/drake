@@ -872,15 +872,41 @@ class BodyNode : public MultibodyTreeElement<BodyNode<T>, BodyNodeIndex> {
     Matrix6<T> phi_WB = CalcPhi(get_X_WB(pc));
     Vector6<T> V_B = phi_WB.transpose() * get_V_WB(vc).get_coeffs();
 
-    // Compute b_B (gyroscopic spatial force).
-    Vector6<T> b_B = SpatialBar(V_B) * P_B * V_B;
+    // Get V_B linear and angular components.
+    Vector6<T> Vangular_B;
+    Vangular_B << V_B.head(3), Vector3<T>::Zero();
+    Vector6<T> Vlinear_B;
+    Vlinear_B << Vector3<T>::Zero(), V_B.tail(3);
 
-    // Compute a_B (Coriolis spatial acceleration, 5.18).
-    // Note that only mobilizers with constant hinge maps are supported.
+    // Compute b_B (gyroscopic spatial force).
+    // Note that inertial frame derivatives at Bo are used.
+    Vector6<T> b_B = SpatialSkew(Vangular_B) * P_B * Vangular_B;
+
+    // Get parent spatial velocity and move to B frame.
+    Matrix6<T> phi_WP = CalcPhi(get_X_WP(pc));
+    Matrix6<T> phi_PB = CalcPhi(get_X_PB(pc));
+    Vector6<T> V_P_B =
+        phi_PB.transpose() * phi_WP.transpose() * get_V_WP(vc).get_coeffs();
+
+    // Get V_P linear and angular components.
+    Vector6<T> Vangular_P_B;
+    Vangular_P_B << V_P_B.head(3), Vector3<T>::Zero();
+    Vector6<T> Vlinear_P_B;
+    Vlinear_P_B << Vector3<T>::Zero(), V_P_B.tail(3);
+
+    // Compute phi for FB.
+    // const Frame<T>& frame_F = get_inboard_frame();
+    // Isometry3<T> X_BF = frame_F.CalcPoseInBodyFrame(context);
+    // Matrix6<T> phi_FB = CalcPhi(X_BF.inverse());
+
+    // Compute a_B (Coriolis spatial acceleration, 5.19).
+    // Note that inertial frame derivatives at Bo are used.
+    // Only mobilizers with constant hinge maps are supported.
     // In effect, we assume d/dt (H*) = 0.
-    Vector6<T> dv_M = get_V_FM(vc).get_coeffs();
-    Vector6<T> a_B = SpatialSkew(V_B) * phi_MB.transpose() * dv_M;
-    a_B -= SpatialBar(dv_M) * dv_M;
+    Matrix3<T> R_BW = get_X_WB(pc).linear().inverse();
+    Vector6<T> V_FM_B = (R_BW * get_V_PB_W(vc)).get_coeffs();
+    Vector6<T> a_B =
+        SpatialSkew(Vangular_P_B) * (Vlinear_B - Vlinear_P_B + V_FM_B);
 
     // Cache a_B.
     abc.get_mutable_a_B(topology_.index) = a_B;
@@ -894,10 +920,8 @@ class BodyNode : public MultibodyTreeElement<BodyNode<T>, BodyNodeIndex> {
       z_B += phi_BC * abc.get_z_B(child->get_index());
     }
 
-    // Move force into B frame and include contribution.
-    Matrix6<T> phi_BW = CalcPhi(get_X_WB(pc).inverse());
-    Vector6<T> F_B = phi_BW * Fapplied_Bo_W.get_coeffs();
-    z_B -= F_B;
+    // Include external force contribution.
+    z_B -= (R_BW * Fapplied_Bo_W).get_coeffs();
 
     // Compute e_M, ensuring that z_B is shifted to M frame.
     Vector6<T> z_M = phi_MB * z_B;
