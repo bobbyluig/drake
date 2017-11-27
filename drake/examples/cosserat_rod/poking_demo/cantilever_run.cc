@@ -109,7 +109,7 @@ int do_main(int argc, char* argv[]) {
       (radius1 * radius1 + radius1 * radius2 + radius2 * radius2) * length;
   const double mass = rho * volume;
 
-  const int num_spatial_dimensions = 2;
+  const int num_spatial_dimensions = 3;
   auto rod_plant = builder.AddSystem<CosseratRodPlant>(
       length, radius1, radius2, rho,
       E, G, tau_d, tau_d, num_elements, num_spatial_dimensions);

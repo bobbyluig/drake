@@ -464,11 +464,11 @@ void CosseratRodPlant<T>::DoCalcTimeDerivatives(
   MatrixX<T> M(nv, nv);
   model_.CalcMassMatrixViaInverseDynamics(context, pc, &M);
   // Check if M is symmetric.
-  // const T err_sym = (M - M.transpose()).norm();
-  // PRINT_VAR(err_sym);
-  //DRAKE_DEMAND(err_sym < 1.0e-6);
+  const T err_sym = (M - M.transpose()).norm();
+  PRINT_VAR(err_sym);
+  // DRAKE_DEMAND(err_sym < 1.0e-6);
 
-  // PRINT_VARn(M);
+  PRINT_VARn(M);
 
   VectorX<T> tau = VectorX<T>::Zero(nv);
   model_.CalcForceElementsContribution(
@@ -573,7 +573,7 @@ void CosseratRodPlant<T>::DoCalcTimeDerivatives(
   VectorX<T> C(nv);
   model_.CalcBiasTerm(context, pc, vc, Fapplied_Bo_W_array, &C);
 
-  PRINT_VAR(C.transpose());
+  // PRINT_VAR(C.transpose());
 
   auto v = x.bottomRows(nv);
 
@@ -590,12 +590,12 @@ void CosseratRodPlant<T>::DoCalcTimeDerivatives(
   // TESTING
   VectorX<T> qddot = VectorX<T>::Zero(nv);
   model_.CalcForwardDynamics(
-      context, pc, vc, Fapplied_Bo_W_array, tau, qdot, &qddot
+      context, pc, vc, Fapplied_Bo_W_array, tau, &qddot
   );
+  std::cout << (qddot - M.llt().solve(-C)).norm()  << std::endl;
   // TESTING
 
-  // xdot << qdot, M.llt().solve(- C);
-  xdot << qdot, qddot;
+  xdot << qdot, M.llt().solve(- C);
   derivatives->SetFromVector(xdot);
 }
 

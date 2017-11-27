@@ -400,7 +400,6 @@ void MultibodyTree<T>::CalcForwardDynamics(
     const VelocityKinematicsCache<T>& vc,
     const std::vector<SpatialForce<T>>& Fapplied_Bo_W_array,
     const Eigen::Ref<const VectorX<T>>& tau_applied_array,
-    const Eigen::Ref<const VectorX<T>>& qdot,
     EigenPtr<VectorX<T>> qddot
 ) const {
   DRAKE_DEMAND(qddot != nullptr);
@@ -418,8 +417,6 @@ void MultibodyTree<T>::CalcForwardDynamics(
 
   ArticulatedBodyCache<T> abc = ArticulatedBodyCache<T>(topology_);
 
-  std::cout << "BEGIN LOOP" << std::endl;
-
   for (int depth = get_tree_height() - 1; depth >= 1; depth--) {
     for (BodyNodeIndex body_node_index : body_node_levels_[depth]) {
       const BodyNode<T>& node = *body_nodes_[body_node_index];
@@ -432,16 +429,11 @@ void MultibodyTree<T>::CalcForwardDynamics(
         Fapplied_Bo_W = Fapplied_Bo_W_array[body_node_index];
       }
 
-      qdot_mobilizer = node.get_mobilizer().get_velocities_from_array(qdot);
-
       node.CalcForwardDynamics_TipToBase(
-          mbt_context, pc, vc, Fapplied_Bo_W,
-          tau_applied_mobilizer, qdot_mobilizer, abc
+          mbt_context, pc, vc, Fapplied_Bo_W, tau_applied_mobilizer, abc
       );
     }
   }
-
-  std::cout << "END LOOP" << std::endl;
 
   for (int depth = 1; depth < get_tree_height(); depth++) {
     for (BodyNodeIndex body_node_index : body_node_levels_[depth]) {

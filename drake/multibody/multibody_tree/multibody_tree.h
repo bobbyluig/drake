@@ -859,7 +859,6 @@ class MultibodyTree {
       const VelocityKinematicsCache<T>& vc,
       const std::vector<SpatialForce<T>>& Fapplied_Bo_W_array,
       const Eigen::Ref<const VectorX<T>>& tau_applied_array,
-      const Eigen::Ref<const VectorX<T>>& qdot,
       EigenPtr<VectorX<T>> qddot
   ) const;
 

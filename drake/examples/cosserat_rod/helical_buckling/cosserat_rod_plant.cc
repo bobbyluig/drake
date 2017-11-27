@@ -466,7 +466,7 @@ void CosseratRodPlant<T>::DoCalcTimeDerivatives(
   // Check if M is symmetric.
   const T err_sym = (M - M.transpose()).norm();
   PRINT_VAR(err_sym);
-  //DRAKE_DEMAND(err_sym < 1.0e-6);
+  // DRAKE_DEMAND(err_sym < 1.0e-6);
 
   PRINT_VARn(M);
 
@@ -592,7 +592,15 @@ void CosseratRodPlant<T>::DoCalcTimeDerivatives(
   // mobilizers.
   //Eigen::LLT<MatrixX<T>> solver(M);
 
-  xdot << qdot, M.llt().solve(- C);
+  // TESTING
+  VectorX<T> qddot = VectorX<T>::Zero(nv);
+  model_.CalcForwardDynamics(
+      context, pc, vc, Fapplied_Bo_W_array, tau, &qddot
+  );
+  std::cout << (qddot - M.llt().solve(-C)).norm()  << std::endl;
+  // TESTING
+
+  xdot << qdot, M.llt().solve(-C);
   derivatives->SetFromVector(xdot);
 }
 

@@ -18,6 +18,7 @@
 #include "drake/multibody/multibody_tree/velocity_kinematics_cache.h"
 #include "drake/multibody/multibody_tree/articulated_body_cache.h"
 
+
 namespace drake {
 namespace multibody {
 
@@ -779,66 +780,24 @@ class BodyNode : public MultibodyTreeElement<BodyNode<T>, BodyNodeIndex> {
     if (tau_applied.size() != 0) tau -= tau_applied;
   }
 
-  Matrix3<T> VectorSkew(const Vector3<T>& l) const {
-    Matrix3<T> l_skew;
-    l_skew << 0, -l(2), l(1),
-              l(2), 0, -l(0),
-              -l(1), l(0), 0;
-    return l_skew;
-  }
-
-  Matrix6<T> SpatialSkew(const Vector6<T>& z) const {
-    Matrix6<T> z_skew = Matrix6<T>::Zero();
-    Matrix3<T> x_skew = VectorSkew(z.head(3));
-    Matrix3<T> y_skew = VectorSkew(z.tail(3));
-    z_skew.block(0, 0, 3, 3) = x_skew;
-    z_skew.block(3, 0, 3, 3) = y_skew;
-    z_skew.block(3, 3, 3, 3) = x_skew;
-    return z_skew;
-  }
-
-  Matrix6<T> SpatialBar(const Vector6<T>& z) const {
-    Matrix6<T> z_skew = Matrix6<T>::Zero();
-    Matrix3<T> x_skew = VectorSkew(z.head(3));
-    Matrix3<T> y_skew = VectorSkew(z.tail(3));
-    z_skew.block(0, 0, 3, 3) = x_skew;
-    z_skew.block(0, 3, 3, 3) = y_skew;
-    z_skew.block(3, 3, 3, 3) = x_skew;
-    return z_skew;
-  }
-
-  Matrix6<T> CalcPhi(const Isometry3<T>& X_FG) const {
+  /// See [Springer 2008, Eq. 2.9].
+  Matrix6<T> CalcShift(const Isometry3<T>& X_FG) const {
     using math::VectorToSkewSymmetric;
 
-    Matrix6<T> shift_matrix = Matrix6<T>::Zero();
+    // Construct shift matrix.
+    Matrix6<T> T_FG = Matrix6<T>::Zero();
 
     // Top left and bottom right are R_FG.
     Matrix3<T> R_FG = X_FG.linear();
-    shift_matrix.block(0, 0, 3, 3) = R_FG;
-    shift_matrix.block(3, 3, 3, 3) = R_FG;
+    T_FG.block(0, 0, 3, 3) = R_FG;
+    T_FG.block(3, 3, 3, 3) = R_FG;
 
     // Top right is l_FG * R_FG.
     Vector3<T> p_FG = X_FG.translation();
-    Matrix3<T> l_FG = VectorSkew(p_FG);
-    shift_matrix.block(0, 3, 3, 3) = l_FG * R_FG;
+    Matrix3<T> l_FG = VectorToSkewSymmetric(p_FG);
+    T_FG.block(3, 0, 3, 3) = l_FG * R_FG;
 
-    return shift_matrix;
-  }
-
-  Matrix6<T> CalcPhi2(const Isometry3<T>& X_FG) const {
-    Matrix6<T> shift_matrix = Matrix6<T>::Zero();
-
-    // Top left and bottom right are R_FG.
-    Matrix3<T> R_FG = X_FG.linear();
-    shift_matrix.block(0, 0, 3, 3) = R_FG;
-    shift_matrix.block(3, 3, 3, 3) = R_FG;
-
-    // Top right is l_FG * R_FG.
-    Vector3<T> p_FG = X_FG.translation();
-    Matrix3<T> l_FG = VectorSkew(p_FG);
-    shift_matrix.block(3, 0, 3, 3) = l_FG * R_FG;
-
-    return shift_matrix;
+    return T_FG;
   }
 
   // Forward dynamics computation.
@@ -848,146 +807,132 @@ class BodyNode : public MultibodyTreeElement<BodyNode<T>, BodyNodeIndex> {
       const VelocityKinematicsCache<T>& vc,
       const SpatialForce<T>& Fapplied_Bo_W,
       const Eigen::Ref<const VectorX<T>>& tau_applied,
-      const Eigen::Ref<const VectorX<T>>& qdot,
       ArticulatedBodyCache<T>& abc
   ) const {
+    // Typedef for cross product.
+    typedef Eigen::Ref<const Vector3<T>> Vector3_t;
+
     // Body for this node.
     const Body<T>& body_B = get_body();
 
-    ////////
-    SpatialVelocity<T> V_WP_W = get_V_WP(vc);
-    SpatialVelocity<T> V_WP_P = get_X_WP(pc).linear().inverse() * V_WP_W;
-    SpatialVelocity<T> V_WPb_P = V_WP_P.Shift(get_X_PB(pc).translation());
-    SpatialVelocity<T> V_WPb_B = get_X_PB(pc).linear().inverse() * V_WPb_P;
+    // Get X_WB and R_BW.
+    const Isometry3<T> X_WB = get_X_WB(pc);
+    const Matrix3<T> R_BW = X_WB.linear().transpose();
 
-    SpatialVelocity<T> V_WB_W = get_V_WB(vc);
-    SpatialVelocity<T> V_WB_B = get_X_WB(pc).linear().inverse() * V_WB_W;
-    std::cout << V_WB_B.get_coeffs().transpose() << std::endl;
+    // Get V_WB_W and re-express in frame B.
+    const SpatialVelocity<T> v_WB_W = get_V_WB(vc);
+    const Vector6<T> V_WB_B = (R_BW * v_WB_W).get_coeffs();
 
+    // Get X_FM and R_MF.
+    const Isometry3<T> X_FM = get_X_FM(pc);
+    const Matrix3<T> R_MF = X_FM.linear().transpose();
+
+    // Get V_FM_F and re-express in frame M.
+    // This is equivalent to H_FM * qdot.
+    const SpatialVelocity<T> v_FM_F = get_V_FM(vc);
+    const Vector6<T> V_FM_M = (R_MF * v_FM_F).get_coeffs();
+
+    // Get frame M, X_BM, X_MB.
     const Frame<T>& frame_M = get_outboard_frame();
-    Isometry3<T> X_BM = frame_M.CalcPoseInBodyFrame(context);
+    const Isometry3<T> X_BM = frame_M.CalcPoseInBodyFrame(context);
+    const Isometry3<T> X_MB = X_BM.inverse();
 
-    SpatialVelocity<T> V_FM_F = get_V_FM(vc);
-    SpatialVelocity<T> V_FM_M = get_X_FM(pc).linear().inverse() * V_FM_F;
+    // Compute T_BM and T_MB from X_BM and X_MB respectively.
+    const Matrix6<T> T_BM = CalcShift(X_BM);
+    const Matrix6<T> T_MB = CalcShift(X_MB);
 
-    const Matrix6X<T> H_B = get_mobilizer().GetHingeMap();
-//    Vector6<T> guess =
-//        CalcPhi2(get_X_PB(pc).inverse()) * V_WP_P.get_coeffs() +
-//            CalcPhi2(X_BM) * (H_B * qdot);
-//    Vector6<T> guess =
-//        CalcPhi2(get_X_PB(pc).inverse()) * V_WP_P.get_coeffs() +
-//            CalcPhi2(X_BM) * V_FM_M.get_coeffs();
-//    Vector6<T> guess =
-//        V_WPb_B.get_coeffs() + CalcPhi(X_BM) * V_FM_M.get_coeffs();
-    SpatialVelocity<T> V_FMm_B = X_BM.linear() * V_FM_M;
-    SpatialVelocity<T> V_FMb_B = V_FMm_B.Shift(-X_BM.translation());
-    Vector6<T> guess =
-        V_WPb_B.get_coeffs() + V_FMb_B.get_coeffs();
-    std::cout << guess.transpose() << std::endl;
-    ////////
+    // Change V_FM_M to V_FMb_B.
+    const Vector6<T> V_FMb_B = T_BM * V_FM_M;
 
-    // Compute P_B.
-    SpatialInertia<T> M_B = body_B.CalcSpatialInertiaInBodyFrame(context);
-    Matrix6<T> P_B = M_B.CopyToFullMatrix6();
+    // Compute the across mobilizer coriolis acceleration, Az_FMb_B.
+    // This computes V_WB_B x V_FMb_B per [Springer 2008, Eq. 2.12].
+    // Note that this assumes d/dt * (H_FM) = 0.
+    // In the more general case, the [d/dt * (H_FM)] * qdot term is needed.
+    // Cache value for later computation.
+    Vector6<T> Az_FMb_B;
+    Az_FMb_B << Vector3_t(V_WB_B.head(3)).cross(Vector3_t(V_FMb_B.head(3))),
+                Vector3_t(V_WB_B.head(3)).cross(Vector3_t(V_FMb_B.tail(3)))
+              + Vector3_t(V_WB_B.tail(3)).cross(Vector3_t(V_FMb_B.head(3)));
+    abc.get_mutable_Az_FMb_B(topology_.index) = Az_FMb_B;
 
-    // Add contribution to P_B of all children.
+    // Compute spatial inertia for body.
+    const Matrix6<T> I_Bo_B = body_B.CalcSpatialInertiaInBodyFrame(context)
+        .CopyToFullMatrix6();
+
+    // Compute partial articulated-body inertia.
+    Matrix6<T> IA_Bo_B = I_Bo_B;
+
+    // Re-express Fapplied_Bo_W in B frame.
+    const Vector6<T> Fapplied_Bo_B = (R_BW * Fapplied_Bo_W).get_coeffs();
+
+    // Obtain hinge map, H_FM, for mobilizer.
+    const Matrix6X<T> H_FM = get_mobilizer().GetHingeMap();
+
+    // Compute partial bias force for body.
+    // V_WB_B x (I_Bo_B * V_WB_B) is per [Springer 2008, Eq. 2.13].
+    // A temporary vector F is used to compute I_Bo_B * V_WB_B.
+    const Vector6<T> F = I_Bo_B * V_WB_B;
+    Vector6<T> FpA_Bo_B;
+    FpA_Bo_B << Vector3_t(V_WB_B.head(3)).cross(Vector3_t(F.head(3)))
+              + Vector3_t(V_WB_B.tail(3)).cross(Vector3_t(F.tail(3))),
+                Vector3_t(V_WB_B.head(3)).cross(Vector3_t(F.tail(3)));
+    FpA_Bo_B -= Fapplied_Bo_B;
+
+    // Add contributions from all children.
+    // This differs slightly from the formulation in [Springer 2008, Tb. 2.8].
+    // Across mobilizer quantities are computed and cached by all children.
     for (const BodyNode<T>* child : children_) {
-      const Matrix6<T> phi_BC = CalcPhi(child->get_X_PB(pc));
-      P_B += phi_BC * abc.get_P_B(child->get_index()) * phi_BC.transpose();
+      // Get X_BC (which is X_PB for child) and invert to get X_CB.
+      const Isometry3<T> X_BC = child->get_X_PB(pc);
+      const Isometry3<T> X_CB = X_BC.inverse();
+
+      // Compute T_CB.
+      const Matrix6<T> T_CB = CalcShift(X_CB);
+
+      // Pull IA_FMc_C from cache (which is IA_FMb_B for child).
+      const Matrix6<T> IA_FMc_C = abc.get_IA_FMb_B(child->get_index());
+
+      // Shift to B frame and add contribution to IA_Bo_B.
+      IA_Bo_B += T_CB.transpose() * IA_FMc_C * T_CB;
+
+      // Pull FpA_FMc_C from cache (which is FpA_FMb_B for child).
+      const Vector6<T> FpA_FMc_C = abc.get_FpA_FMb_B(child->get_index());
+
+      // Shift to B frame and add contribution to FpA_Bo_B.
+      FpA_Bo_B += T_CB.transpose() * FpA_FMc_C;
     }
 
-    // Compute phi for BM and MB.
-    // const Frame<T>& frame_M = get_outboard_frame();
-    // Isometry3<T> X_BM = frame_M.CalcPoseInBodyFrame(context);
-    Matrix6<T> phi_BM = CalcPhi(X_BM);
-    Matrix6<T> phi_MB = CalcPhi(X_BM.inverse());
+    // Change IA_Bo_B, FpA_Bo_B, and Az_FMb_B to *m_M for later computation.
+    const Matrix6<T> IA_Bm_M = T_BM.transpose() * IA_Bo_B * T_BM;
+    const Vector6<T> FpA_Bm_M = T_BM.transpose() * FpA_Bo_B;
+    const Vector6<T> Az_FMm_M = T_MB * Az_FMb_B;
 
-    // Shift P_B to P_M.
-    Matrix6<T> P_M = phi_MB * P_B * phi_MB.transpose();
+    // Compute U_FM_M and cache.
+    const Matrix6X<T> U_FM_M = IA_Bm_M * H_FM;
+    abc.get_mutable_U_FM_M(topology_.index) = U_FM_M;
 
-    // Get hinge map and compute D, g, tau_bar in M frame.
-    const Matrix6X<T> H_M = get_mobilizer().GetHingeMap();
-    MatrixX<T> D_M = H_M.transpose() * P_M * H_M;
-    MatrixX<T> D_M_inv = D_M.inverse();
-    Matrix6X<T> g_M = P_M * H_M * D_M_inv;
-    Matrix6<T> tau_bar_M = Matrix6<T>::Identity() - g_M * H_M.transpose();
+    // Compute D_FM_M and cache.
+    const MatrixX<T> D_FM_M = (H_FM.transpose() * U_FM_M).inverse();
+    abc.get_mutable_D_FM_M(topology_.index) = D_FM_M;
 
-    // Cache g_M.
-    abc.get_mutable_g_M(topology_.index) = g_M;
+    // Compute u_FM_M and cache.
+    const VectorX<T> u_FM_M = tau_applied
+                            - U_FM_M.transpose() * Az_FMm_M
+                            - H_FM.transpose() * FpA_Bm_M;
+    abc.get_mutable_u_FM_M(topology_.index) = u_FM_M;
 
-    // Compute P_plus_B.
-    abc.get_mutable_P_B(topology_.index) =
-        phi_BM * (tau_bar_M * P_M) * phi_BM.transpose();
+    // Compute IA_FMm_M, shift to *b_B, and cache.
+    const Matrix6<T> IA_FMm_M = IA_Bm_M
+                              - U_FM_M * D_FM_M * U_FM_M.transpose();
+    const Matrix6<T> IA_FMb_B = T_MB.transpose() * IA_FMm_M * T_MB;
+    abc.get_mutable_IA_FMb_B(topology_.index) = IA_FMb_B;
 
-    // Move spatial velocity to B frame.
-    Matrix6<T> phi_WB = CalcPhi(get_X_WB(pc));
-    Vector6<T> V_B = phi_WB.transpose() * get_V_WB(vc).get_coeffs();
-
-    // Get V_B linear and angular components.
-    Vector6<T> Vangular_B;
-    Vangular_B << V_B.head(3), Vector3<T>::Zero();
-    Vector6<T> Vlinear_B;
-    Vlinear_B << Vector3<T>::Zero(), V_B.tail(3);
-
-    // Compute b_B (gyroscopic spatial force).
-    // Note that inertial frame derivatives at Bo are used.
-    Vector6<T> b_B = SpatialSkew(Vangular_B) * P_B * Vangular_B;
-
-    // Get parent spatial velocity and move to B frame.
-    Matrix6<T> phi_WP = CalcPhi(get_X_WP(pc));
-    Matrix6<T> phi_PB = CalcPhi(get_X_PB(pc));
-    Vector6<T> V_P_B =
-        phi_PB.transpose() * phi_WP.transpose() * get_V_WP(vc).get_coeffs();
-
-    // Get V_P linear and angular components.
-    Vector6<T> Vangular_P_B;
-    Vangular_P_B << V_P_B.head(3), Vector3<T>::Zero();
-    Vector6<T> Vlinear_P_B;
-    Vlinear_P_B << Vector3<T>::Zero(), V_P_B.tail(3);
-
-    // Compute phi for FB.
-    // const Frame<T>& frame_F = get_inboard_frame();
-    // Isometry3<T> X_BF = frame_F.CalcPoseInBodyFrame(context);
-    // Matrix6<T> phi_FB = CalcPhi(X_BF.inverse());
-
-    // Compute a_B (Coriolis spatial acceleration, 5.19).
-    // Note that inertial frame derivatives at Bo are used.
-    // Only mobilizers with constant hinge maps are supported.
-    // In effect, we assume d/dt (H*) = 0.
-    Matrix3<T> R_BW = get_X_WB(pc).linear().inverse();
-    Vector6<T> V_FM_B = (R_BW * get_V_PB_W(vc)).get_coeffs();
-    Vector6<T> a_B =
-        SpatialSkew(Vangular_P_B) * (Vlinear_B - Vlinear_P_B + V_FM_B);
-
-    // Cache a_B.
-    abc.get_mutable_a_B(topology_.index) = a_B;
-
-    // Compute z_B.
-    Vector6<T> z_B = P_B * a_B + b_B;
-
-    // Add contribution to z_B of all children.
-    for (const BodyNode<T>* child : children_) {
-      const Matrix6<T> phi_BC = CalcPhi(child->get_X_PB(pc));
-      z_B += phi_BC * abc.get_z_B(child->get_index());
-    }
-
-    // Include external force contribution.
-    z_B -= (R_BW * Fapplied_Bo_W).get_coeffs();
-
-    // Compute e_M, ensuring that z_B is shifted to M frame.
-    Vector6<T> z_M = phi_MB * z_B;
-    VectorX<T> e_M = -(H_M.transpose() * z_M);
-
-    // Include tau contribution.
-    if (tau_applied.size() != 0) {
-      e_M += tau_applied;
-    }
-
-    // Compute v_M.
-    abc.get_mutable_v_M(topology_.index) = D_M_inv * e_M;
-
-    // Compute z_plus_B.
-    abc.get_mutable_z_B(topology_.index) = phi_BM * (z_M + g_M * e_M);
+    // Compute FpA_FMm_M, shift to *b_B, and cache.
+    const Vector6<T> FpA_FMm_M = FpA_Bm_M
+                               + IA_Bm_M * Az_FMm_M
+                               + U_FM_M * D_FM_M * u_FM_M;
+    const Vector6<T> FpA_FMb_B = T_MB.transpose() * FpA_FMm_M;
+    abc.get_mutable_FpA_FMb_B(topology_.index) = FpA_FMb_B;
   }
 
   void CalcGeneralizedAcceleration_BaseToTip(
@@ -997,38 +942,49 @@ class BodyNode : public MultibodyTreeElement<BodyNode<T>, BodyNodeIndex> {
       ArticulatedBodyCache<T>& abc,
       EigenPtr<VectorX<T>> qddot
   ) const {
-    // Compute phi_PB.
-    Matrix6<T> phi_PB = CalcPhi(get_X_PB(pc));
+    // Get X_PB, X_BP, and T_BP.
+    const Isometry3<T> X_PB = get_X_PB(pc);
+    const Isometry3<T> X_BP = X_PB.inverse();
+    const Matrix6<T> T_BP = CalcShift(X_BP);
 
-    // Compute a_plus_B.
-    Vector6<T> alpha_plus_B =
-        phi_PB.transpose() * abc.get_alpha_B(parent_node_->get_index());
+    // Get A_WP_P (which is A_WB_B for parent).
+    Vector6<T> A_WP_P = abc.get_A_WB_B(parent_node_->get_index());
 
-    // Compute phi for BM and MB.
+    // Change A_WP_P to A_FMb_B (across mobilizer shift).
+    Vector6<T> A_FMb_B = T_BP * A_WP_P;
+
+    // Get frame M, X_BM, X_MB.
     const Frame<T>& frame_M = get_outboard_frame();
-    Isometry3<T> X_BM = frame_M.CalcPoseInBodyFrame(context);
-    Matrix6<T> phi_BM = CalcPhi(X_BM);
-    Matrix6<T> phi_MB = CalcPhi(X_BM.inverse());
+    const Isometry3<T> X_BM = frame_M.CalcPoseInBodyFrame(context);
+    const Isometry3<T> X_MB = X_BM.inverse();
 
-    // Shift alpha_plus_B to alpha_plus_M.
-    Vector6<T> alpha_plus_M = phi_BM.transpose() * alpha_plus_B;
+    // Compute T_BM and T_MB from X_BM and X_MB respectively.
+    const Matrix6<T> T_BM = CalcShift(X_BM);
+    const Matrix6<T> T_MB = CalcShift(X_MB);
 
-    // Compute theta_ddot.
-    // Note that gravity is already included in the force element.
-    const VectorX<T> v_M = abc.get_v_M(topology_.index);
-    const Matrix6X<T> g_M = abc.get_g_M(topology_.index);
-    VectorX<T> theta_ddot = v_M - g_M.transpose() * alpha_plus_M;
+    // Change A_FMb_B to A_FM_M.
+    const Vector6<T> A_FM_M = T_MB * A_FMb_B;
 
-    // Set vdot.
-    get_mutable_velocities_from_array(qddot) = theta_ddot;
+    // Pull D_FM_M, u_FM_M, and U_FM_M from cache.
+    const MatrixX<T> D_FM_M = abc.get_D_FM_M(topology_.index);
+    const VectorX<T> u_FM_M = abc.get_u_FM_M(topology_.index);
+    const Matrix6X<T> U_FM_M = abc.get_U_FM_M(topology_.index);
 
-    // Get hinge map.
-    const Matrix6X<T> H_M = get_mobilizer().GetHingeMap();
+    // Compute qddot for mobilizer.
+    const VectorX<T> qddot_M = D_FM_M * (u_FM_M - U_FM_M.transpose() * A_FM_M);
 
-    // Compute alpha_B.
-    const Vector6<T> a_B = abc.get_a_B(topology_.index);
-    abc.get_mutable_alpha_B(topology_.index) =
-        alpha_plus_B + phi_MB.transpose() * (H_M * theta_ddot) + a_B;
+    // Set qddot_M.
+    get_mutable_velocities_from_array(qddot) = qddot_M;
+
+    // Pull Az_FMb_B from cache.
+    const Vector6<T> Az_FMb_B = abc.get_Az_FMb_B(topology_.index);
+
+    // Obtain hinge map, H_FM, for mobilizer.
+    const Matrix6X<T> H_FM = get_mobilizer().GetHingeMap();
+
+    // Compute A_WB_B and cache.
+    const Vector6<T> A_WB_B = A_FMb_B + T_BM * (H_FM * qddot_M) + Az_FMb_B;
+    abc.get_mutable_A_WB_B(topology_.index) = A_WB_B;
   }
 
   /// Returns the topology information for this body node.

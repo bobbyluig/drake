@@ -564,6 +564,14 @@ void CosseratRodPlant<T>::DoCalcTimeDerivatives(
   // mobilizers.
   //Eigen::LLT<MatrixX<T>> solver(M);
 
+  // TESTING
+  VectorX<T> qddot = VectorX<T>::Zero(nv);
+  model_.CalcForwardDynamics(
+      context, pc, vc, Fapplied_Bo_W_array, tau, &qddot
+  );
+  std::cout << (qddot - M.llt().solve(-C)).norm()  << std::endl;
+  // TESTING
+
   xdot << qdot, M.llt().solve(- C);
   derivatives->SetFromVector(xdot);
 }
