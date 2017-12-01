@@ -446,6 +446,59 @@ void MultibodyTree<T>::MapVelocityToQDot(
 }
 
 template <typename T>
+void MultibodyTree<T>::CalcForwardDynamics(
+    const systems::Context<T>& context,
+    const PositionKinematicsCache<T>& pc,
+    const VelocityKinematicsCache<T>& vc,
+    const std::vector<SpatialForce<T>>& Fapplied_Bo_W_array,
+    const Eigen::Ref<const VectorX<T>>& tau_applied_array,
+    EigenPtr<VectorX<T>> qddot
+) const {
+  DRAKE_DEMAND(qddot != nullptr);
+  DRAKE_DEMAND(qddot->size() == get_num_velocities());
+
+  const int Fapplied_size = (int) (Fapplied_Bo_W_array.size());
+  const int tau_array_size = (int) (tau_applied_array.size());
+
+  VectorX<T> tau_applied_mobilizer(0);
+  SpatialForce<T> Fapplied_Bo_W = SpatialForce<T>::Zero();
+  VectorX<T> qdot_mobilizer(0);
+
+  const auto& mbt_context =
+      dynamic_cast<const MultibodyTreeContext<T>&>(context);
+
+  ArticulatedBodyCache<T> abc = ArticulatedBodyCache<T>(topology_);
+
+  for (int depth = get_tree_height() - 1; depth >= 1; depth--) {
+    for (BodyNodeIndex body_node_index : body_node_levels_[depth]) {
+      const BodyNode<T>& node = *body_nodes_[body_node_index];
+
+      if (tau_array_size != 0) {
+        tau_applied_mobilizer = node.get_mobilizer()
+            .get_generalized_forces_from_array(tau_applied_array);
+      }
+      if (Fapplied_size != 0) {
+        Fapplied_Bo_W = Fapplied_Bo_W_array[body_node_index];
+      }
+
+      node.CalcForwardDynamics_TipToBase(
+          mbt_context, pc, vc, Fapplied_Bo_W, tau_applied_mobilizer, abc
+      );
+    }
+  }
+
+  for (int depth = 1; depth < get_tree_height(); depth++) {
+    for (BodyNodeIndex body_node_index : body_node_levels_[depth]) {
+      const BodyNode<T>& node = *body_nodes_[body_node_index];
+
+      node.CalcGeneralizedAcceleration_BaseToTip(
+          mbt_context, pc, vc, abc, qddot
+      );
+    }
+  }
+}
+
+template <typename T>
 void MultibodyTree<T>::CalcMassMatrixViaInverseDynamics(
     const systems::Context<T>& context, EigenPtr<MatrixX<T>> H) const {
   DRAKE_DEMAND(H != nullptr);

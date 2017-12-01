@@ -235,6 +235,11 @@ class SpaceXYZMobilizer final : public MobilizerImpl<T, 3, 3> {
       const Eigen::Ref<const VectorX<T>>& qdot,
       EigenPtr<VectorX<T>> v) const override;
 
+  const Matrix6X<T> GetHingeMap() const override {
+    Matrix6X<T> h(6, 3);
+    h << Matrix3<T>::Identity(), Matrix3<T>::Zero();
+    return h;
+  };
 
  protected:
   std::unique_ptr<Mobilizer<double>> DoCloneToScalar(

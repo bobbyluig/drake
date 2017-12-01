@@ -21,6 +21,7 @@
 #include "drake/multibody/multibody_tree/multibody_tree_topology.h"
 #include "drake/multibody/multibody_tree/position_kinematics_cache.h"
 #include "drake/multibody/multibody_tree/velocity_kinematics_cache.h"
+#include "drake/multibody/multibody_tree/articulated_body_cache.h"
 #include "drake/systems/framework/context.h"
 
 namespace drake {
@@ -1163,6 +1164,16 @@ class MultibodyTree {
       const systems::Context<T>& context,
       const Eigen::Ref<const VectorX<T>>& qdot,
       EigenPtr<VectorX<T>> v) const;
+
+  /// Compute forward dynamics using the Articulate Body Algorithm.
+  void CalcForwardDynamics(
+      const systems::Context<T>& context,
+      const PositionKinematicsCache<T>& pc,
+      const VelocityKinematicsCache<T>& vc,
+      const std::vector<SpatialForce<T>>& Fapplied_Bo_W_array,
+      const Eigen::Ref<const VectorX<T>>& tau_applied_array,
+      EigenPtr<VectorX<T>> qddot
+  ) const;
 
   /// @}
   // Closes "Computational methods" Doxygen section.

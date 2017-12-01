@@ -268,11 +268,19 @@ void PendulumPlant<T>::DoCalcTimeDerivatives(
       context, pc, vc, vdot, Fapplied_Bo_W_array, tau_applied,
       &A_WB_array, &Fapplied_Bo_W_array, &C);
 
+  VectorX<T> qddot = M.llt().solve(-C);
+
+  VectorX<T> qddot_aba = VectorX<T>::Zero(nv);
+  model_->CalcForwardDynamics(
+      context, pc, vc, Fapplied_Bo_W_array, tau_applied, &qddot_aba
+  );
+  std::cout << (-qddot_aba - qddot).norm()  << std::endl;
+
   auto v = x.bottomRows(nv);
 
   VectorX<T> xdot(model_->get_num_states());
   // For this simple model v = qdot.
-  xdot << v, M.llt().solve(-C);
+  xdot << v, qddot;
   derivatives->SetFromVector(xdot);
 }
 
