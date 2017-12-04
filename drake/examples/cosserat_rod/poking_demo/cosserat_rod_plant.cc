@@ -588,11 +588,11 @@ void CosseratRodPlant<T>::DoCalcTimeDerivatives(
   //Eigen::LLT<MatrixX<T>> solver(M);
 
   // TESTING
-  VectorX<T> qddot = VectorX<T>::Zero(nv);
+  VectorX<T> vdot = VectorX<T>::Zero(nv);
   model_.CalcForwardDynamics(
-      context, pc, vc, Fapplied_Bo_W_array, tau, &qddot
+      context, pc, vc, Fapplied_Bo_W_array, tau, &vdot
   );
-  std::cout << (qddot - M.llt().solve(-C)).norm()  << std::endl;
+  std::cout << (vdot - M.llt().solve(-C)).norm()  << std::endl;
   // TESTING
 
   xdot << qdot, M.llt().solve(- C);

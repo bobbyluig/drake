@@ -36,19 +36,20 @@ drake_cc_library(
     name = "multibody_tree_context",
     srcs = [
         "acceleration_kinematics_cache.cc",
-        "articulated_body_cache.cc",
+        "articulated_kinematics_cache.cc",
         "multibody_tree_context.cc",
         "position_kinematics_cache.cc",
         "velocity_kinematics_cache.cc",
     ],
     hdrs = [
         "acceleration_kinematics_cache.h",
-        "articulated_body_cache.h",
+        "articulated_kinematics_cache.h",
         "multibody_tree_context.h",
         "position_kinematics_cache.h",
         "velocity_kinematics_cache.h",
     ],
     deps = [
+        ":articulated_inertia",
         ":multibody_tree_topology",
         "//drake/common:autodiff",
         "//drake/multibody/multibody_tree/math:spatial_acceleration",
@@ -138,6 +139,16 @@ drake_cc_library(
     hdrs = ["unit_inertia.h"],
     deps = [
         ":rotational_inertia",
+    ],
+)
+
+drake_cc_library(
+    name = "articulated_inertia",
+    srcs = ["articulated_inertia.cc"],
+    hdrs = ["articulated_inertia.h"],
+    deps = [
+        ":spatial_inertia",
+        "//drake/multibody/multibody_tree/math:spatial_algebra",
     ],
 )
 

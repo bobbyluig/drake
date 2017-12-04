@@ -400,10 +400,10 @@ void MultibodyTree<T>::CalcForwardDynamics(
     const VelocityKinematicsCache<T>& vc,
     const std::vector<SpatialForce<T>>& Fapplied_Bo_W_array,
     const Eigen::Ref<const VectorX<T>>& tau_applied_array,
-    EigenPtr<VectorX<T>> qddot
+    EigenPtr<VectorX<T>> vdot
 ) const {
-  DRAKE_DEMAND(qddot != nullptr);
-  DRAKE_DEMAND(qddot->size() == get_num_velocities());
+  DRAKE_DEMAND(vdot != nullptr);
+  DRAKE_DEMAND(vdot->size() == get_num_velocities());
 
   const int Fapplied_size = (int) (Fapplied_Bo_W_array.size());
   const int tau_array_size = (int) (tau_applied_array.size());
@@ -415,7 +415,7 @@ void MultibodyTree<T>::CalcForwardDynamics(
   const auto& mbt_context =
       dynamic_cast<const MultibodyTreeContext<T>&>(context);
 
-  ArticulatedBodyCache<T> abc = ArticulatedBodyCache<T>(topology_);
+  ArticulatedKinematicsCache<T> bc = ArticulatedKinematicsCache<T>(topology_);
 
   for (int depth = get_tree_height() - 1; depth >= 1; depth--) {
     for (BodyNodeIndex body_node_index : body_node_levels_[depth]) {
@@ -429,18 +429,20 @@ void MultibodyTree<T>::CalcForwardDynamics(
         Fapplied_Bo_W = Fapplied_Bo_W_array[body_node_index];
       }
 
-      node.CalcForwardDynamics_TipToBase(
-          mbt_context, pc, vc, Fapplied_Bo_W, tau_applied_mobilizer, abc
+      node.CalcArticulatedKinematicsCache_TipToBase(
+          mbt_context, pc, vc, Fapplied_Bo_W, tau_applied_mobilizer, bc
       );
     }
   }
+
+  AccelerationKinematicsCache<T> ac = AccelerationKinematicsCache<T>(topology_);
 
   for (int depth = 1; depth < get_tree_height(); depth++) {
     for (BodyNodeIndex body_node_index : body_node_levels_[depth]) {
       const BodyNode<T>& node = *body_nodes_[body_node_index];
 
-      node.CalcGeneralizedAcceleration_BaseToTip(
-          mbt_context, pc, vc, abc, qddot
+      node.CalcForwardDynamics_BaseToTip(
+          mbt_context, pc, vc, bc, ac, vdot
       );
     }
   }

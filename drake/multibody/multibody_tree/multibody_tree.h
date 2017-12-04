@@ -9,6 +9,7 @@
 #include "drake/common/drake_copyable.h"
 #include "drake/common/eigen_autodiff_types.h"
 #include "drake/multibody/multibody_tree/acceleration_kinematics_cache.h"
+#include "drake/multibody/multibody_tree/articulated_kinematics_cache.h"
 #include "drake/multibody/multibody_tree/body.h"
 #include "drake/multibody/multibody_tree/body_node.h"
 #include "drake/multibody/multibody_tree/force_element.h"
@@ -852,14 +853,14 @@ class MultibodyTree {
       const Eigen::Ref<const VectorX<T>>& v,
       EigenPtr<VectorX<T>> qdot) const;
 
-  /// Compute forward dynamics using the Articulate Body Algorithm.
+  /// Computes forward dynamics.
   void CalcForwardDynamics(
       const systems::Context<T>& context,
       const PositionKinematicsCache<T>& pc,
       const VelocityKinematicsCache<T>& vc,
       const std::vector<SpatialForce<T>>& Fapplied_Bo_W_array,
       const Eigen::Ref<const VectorX<T>>& tau_applied_array,
-      EigenPtr<VectorX<T>> qddot
+      EigenPtr<VectorX<T>> vdot
   ) const;
 
   /// @name Methods to retrieve multibody element variants
