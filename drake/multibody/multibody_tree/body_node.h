@@ -822,7 +822,7 @@ class BodyNode : public MultibodyTreeElement<BodyNode<T>, BodyNodeIndex> {
     // Get the pose of frame M relative to frame F.
     const Isometry3<T> X_FM = get_X_FM(pc);
 
-    // Compute X_MF and X_MB.
+    // Compute X_MB and X_FB.
     const Isometry3<T> X_MB = X_BM.inverse();
     const Isometry3<T> X_FB = X_FM * X_MB;
 
@@ -881,23 +881,24 @@ class BodyNode : public MultibodyTreeElement<BodyNode<T>, BodyNodeIndex> {
     // Cache Az_FM.
     bc.get_mutable_Az_FM(topology_.index) = Az_FM;
 
+    // Get M_B.
+    const SpatialInertia<T> M_B = body_B.CalcSpatialInertiaInBodyFrame(context);
+
     // Compute articulated bias force (Fp).
-    // This is done using CalcBodySpatialForceGivenItsSpatialAcceleration().
-    SpatialForce<T> Fp_BBo_W;
-    CalcBodySpatialForceGivenItsSpatialAcceleration(
-        context, pc, vc, SpatialAcceleration<T>(Vector6<T>::Zero()), &Fp_BBo_W
+    const SpatialForce<T> Ftemp = SpatialForce<T>(
+        M_B.CopyToFullMatrix6() * V_WB_B.get_coeffs()
+    );
+    SpatialForce<T> Fp_BBo_B = SpatialForce<T>(
+      V_WB_B.rotational().cross(Ftemp.rotational())
+          + V_WB_B.translational().cross(Ftemp.translational()),
+      V_WB_B.rotational().cross(Ftemp.translational())
     );
 
     // Subtract external force contribution from Fp.
-    Fp_BBo_W -= Fapplied_Bo_W;
-
-    // Shift articulated bias force to B frame.
-    SpatialForce<T> Fp_BBo_B = R_BW * Fp_BBo_W;
+    Fp_BBo_B -= R_BW * Fapplied_Bo_W;
 
     // Compute articulated body inertia for body.
-    ArticulatedInertia<T> I_BBo_B = ArticulatedInertia<T>(
-        body_B.CalcSpatialInertiaInBodyFrame(context)
-    );
+    ArticulatedInertia<T> I_BBo_B = ArticulatedInertia<T>(M_B);
 
     // Add articulated body contributions from all children.
     // This differs slightly from the formulation in [Springer 2008, Tb. 2.8].
@@ -957,14 +958,14 @@ class BodyNode : public MultibodyTreeElement<BodyNode<T>, BodyNodeIndex> {
         - H_FM.transpose() * Fp_BMo_F.get_coeffs();
     bc.get_mutable_u_FM(topology_.index) = u_FM;
 
-    // Compute R_BF and p_MoBo_B.
-    const Matrix3<T> R_BF = X_BF.linear();
-    const Vector3<T> p_MoBo_B = -p_BoMo_B;
-
     // Compute across mobilizer articulated body inertia.
     const ArticulatedInertia<T> I_FMMo_F = ArticulatedInertia<T>(
         I_BMo_F.get_matrix() - U_FM * D_FM * U_FM.transpose()
     );
+
+    // Compute R_BF and p_MoBo_B.
+    const Matrix3<T> R_BF = X_BF.linear();
+    const Vector3<T> p_MoBo_B = -p_BoMo_B;
 
     // Re-express in frame B and shift to Bo.
     const ArticulatedInertia<T> I_FMMo_B = I_FMMo_F.ReExpress(R_BF);
