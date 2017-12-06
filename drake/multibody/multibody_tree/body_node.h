@@ -780,26 +780,6 @@ class BodyNode : public MultibodyTreeElement<BodyNode<T>, BodyNodeIndex> {
     if (tau_applied.size() != 0) tau -= tau_applied;
   }
 
-  /// See [Springer 2008, Eq. 2.9].
-  Matrix6<T> CalcShift(const Isometry3<T>& X_FG) const {
-    using math::VectorToSkewSymmetric;
-
-    // Construct shift matrix.
-    Matrix6<T> T_FG = Matrix6<T>::Zero();
-
-    // Top left and bottom right are R_FG.
-    Matrix3<T> R_FG = X_FG.linear();
-    T_FG.block(0, 0, 3, 3) = R_FG;
-    T_FG.block(3, 3, 3, 3) = R_FG;
-
-    // Top right is l_FG * R_FG.
-    Vector3<T> p_FG = X_FG.translation();
-    Matrix3<T> l_FG = VectorToSkewSymmetric(p_FG);
-    T_FG.block(3, 0, 3, 3) = l_FG * R_FG;
-
-    return T_FG;
-  }
-
   void CalcArticulatedKinematicsCache_TipToBase(
       const MultibodyTreeContext<T>& context,
       const PositionKinematicsCache<T>& pc,
