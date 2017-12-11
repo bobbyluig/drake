@@ -851,22 +851,54 @@ class BodyNode : public MultibodyTreeElement<BodyNode<T>, BodyNodeIndex> {
         context, pc, vc, SpatialAcceleration<T>(Vector6<T>::Zero()), &Fb_B_W
     );
 
-    // Get V_WB.
-    const SpatialVelocity<T> V_WB = get_V_WB(vc);
+    // Define a few zero helper vectors.
+    const VectorX<T> vmdot_zero =
+        VectorX<T>::Zero(get_num_mobilizer_velocites());
+    const SpatialAcceleration<T> A_zero =
+        SpatialAcceleration<T>(Vector6<T>::Zero());
+
+    // Compute Aa_B_W, the coriolis acceleration.
+    // Do this by first computing A_FM = Hdot_FM * vm.
+    const SpatialAcceleration<T> A_FM = get_mobilizer()
+        .CalcAcrossMobilizerSpatialAcceleration(context, vmdot_zero);
+
+    // Inboard frame F and outboard frame M of this node's mobilizer.
+    const Frame<T>& frame_F = get_inboard_frame();
+    const Frame<T>& frame_M = get_outboard_frame();
+
+    // Compute X_PF and X_MB.
+    const Isometry3<T> X_PF = frame_F.CalcPoseInBodyFrame(context);
+    const Isometry3<T> X_MB = frame_M.CalcPoseInBodyFrame(context).inverse();
+
+    // Get X_WP.
+    const Isometry3<T>& X_WP = get_X_WP(pc);
+
+    // Compute R_WF.
+    const Matrix3<T> R_WF = X_WP.linear() * X_PF.linear();
+
+    // Compute shift vector p_MoBo_F.
+    const Vector3<T> p_MoBo_F = get_X_FM(pc).linear() * X_MB.translation();
+
+    // Get V_FM.
+    const SpatialVelocity<T>& V_FM = get_V_FM(vc);
+
+    // Get A_PB_W by shifting and re-expressing.
+    const SpatialAcceleration<T> A_PB_W =
+        R_WF * A_FM.Shift(p_MoBo_F, V_FM.rotational());
 
     // Get V_WP.
-    const SpatialVelocity<T> V_WP = get_V_WP(vc);
+    const SpatialVelocity<T>& V_WP = get_V_WP(vc);
 
-    // Get V_FM and V_FM_W.
-    const SpatialVelocity<T> V_PB_W = get_V_PB_W(vc);
+    // Get V_PB_W.
+    const SpatialVelocity<T>& V_PB_W = get_V_PB_W(vc);
 
-    // Compute Aa_B_W, the coriolis acceleration, per [Jain, eq. 5.20b].
-    // This assumes that Ḣ_FM(q) = 0.
-    const SpatialAcceleration<T> Aa_B_W = SpatialAcceleration<T>(
-        V_WB.rotational().cross(V_PB_W.rotational()),
-        V_WP.rotational().cross(V_WB.translational() - V_WP.translational()
-                                    + V_PB_W.translational())
-    );
+    // Compute shift vector p_PoBo_W.
+    const Vector3<T> p_PoBo_W = X_WP.linear() * get_X_PB(pc).translation();
+
+    // Compute coriolis acceleration Aa_B_W by composing using zero.
+    const SpatialAcceleration<T> Aa_B_W =
+        A_zero.ComposeWithMovingFrameAcceleration(p_PoBo_W, V_WP.rotational(),
+                                                  V_PB_W, A_PB_W);
 
     // Cache Aa_B_W.
     bc.get_mutable_Aa_B_W(topology_.index) = Aa_B_W;

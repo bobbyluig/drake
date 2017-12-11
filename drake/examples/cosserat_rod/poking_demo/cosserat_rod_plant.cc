@@ -592,7 +592,6 @@ void CosseratRodPlant<T>::DoCalcTimeDerivatives(
   model_.CalcForwardDynamics(
       context, pc, vc, Fapplied_Bo_W_array, tau, &vdot
   );
-  // std::cout << (vdot - M.llt().solve(-C)).norm() << std::endl;
   std::cout << (vdot - M.llt().solve(-C)).norm() << std::endl;
   // TESTING
 
