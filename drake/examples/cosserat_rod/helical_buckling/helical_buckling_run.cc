@@ -102,7 +102,7 @@ int do_main(int argc, char* argv[]) {
   // Numerical parameters:
   const int num_elements = 50;
   const double dt = T1/50;//T1/100;  // [sec]
-  // const double end_time = T1;
+  const double end_time = T1;
 
   // Other derived numbers.
   const double volume = M_PI/3.0 *
@@ -189,7 +189,7 @@ int do_main(int argc, char* argv[]) {
 
   // Simulate:
   auto start = std::chrono::high_resolution_clock::now();
-  simulator.StepTo(20);
+  simulator.StepTo(end_time);
   auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
       std::chrono::high_resolution_clock::now() - start
   );
