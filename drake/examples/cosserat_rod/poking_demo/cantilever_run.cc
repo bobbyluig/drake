@@ -188,13 +188,18 @@ int do_main(int argc, char* argv[]) {
   //   loosest (i.e the maximum): 0.1
 
   // Simulate:
+  auto start = std::chrono::high_resolution_clock::now();
   simulator.StepTo(end_time);
+  auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+      std::chrono::high_resolution_clock::now() - start
+  );
 
   PRINT_VAR(integrator->get_num_steps_taken());
   PRINT_VAR(integrator->get_num_step_shrinkages_from_substep_failures());
   PRINT_VAR(integrator->get_num_step_shrinkages_from_error_control());
   PRINT_VAR(simulator.get_integrator()->get_smallest_adapted_step_size_taken());
   PRINT_VAR(simulator.get_integrator()->get_largest_step_size_taken());
+  PRINT_VAR(elapsed.count());
 
 #if 0
   // Write to file logged data.

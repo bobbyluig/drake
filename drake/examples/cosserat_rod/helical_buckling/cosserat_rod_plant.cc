@@ -460,7 +460,7 @@ void CosseratRodPlant<T>::DoCalcTimeDerivatives(
   for (auto& F : Fapplied_Bo_W_array) F.SetZero();
 
   PRINT_VAR(last_element_->get_node_index());
-
+//
 //  MatrixX<T> M(nv, nv);
 //  model_.CalcMassMatrixViaInverseDynamics(context, pc, &M);
 //  // Check if M is symmetric.
@@ -592,15 +592,17 @@ void CosseratRodPlant<T>::DoCalcTimeDerivatives(
   // mobilizers.
   //Eigen::LLT<MatrixX<T>> solver(M);
 
+//  VectorX<T> qddot = M.llt().solve(-C);
+
   // TESTING
-  VectorX<T> qddot = VectorX<T>::Zero(nv);
+  VectorX<T> qddot_aba = VectorX<T>::Zero(nv);
   model_.CalcForwardDynamics(
-      context, pc, vc, Fapplied_Bo_W_array, tau, &qddot
+      context, pc, vc, Fapplied_Bo_W_array, tau, &qddot_aba
   );
-  // std::cout << (qddot - M.llt().solve(-C)).norm()  << std::endl;
+//  std::cout << (qddot - qddot_aba).norm() / qddot.norm()  << std::endl;
   // TESTING
 
-  xdot << qdot, qddot;
+  xdot << qdot, qddot_aba;
   derivatives->SetFromVector(xdot);
 }
 

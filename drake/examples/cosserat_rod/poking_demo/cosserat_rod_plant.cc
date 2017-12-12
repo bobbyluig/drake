@@ -461,14 +461,14 @@ void CosseratRodPlant<T>::DoCalcTimeDerivatives(
 
   PRINT_VAR(last_element_->get_node_index());
 
-  MatrixX<T> M(nv, nv);
-  model_.CalcMassMatrixViaInverseDynamics(context, pc, &M);
-  // Check if M is symmetric.
-  const T err_sym = (M - M.transpose()).norm();
-  PRINT_VAR(err_sym);
-  // DRAKE_DEMAND(err_sym < 1.0e-6);
-
-  PRINT_VARn(M);
+//  MatrixX<T> M(nv, nv);
+//  model_.CalcMassMatrixViaInverseDynamics(context, pc, &M);
+//  // Check if M is symmetric.
+//  const T err_sym = (M - M.transpose()).norm();
+//  PRINT_VAR(err_sym);
+//  // DRAKE_DEMAND(err_sym < 1.0e-6);
+//
+//  PRINT_VARn(M);
 
   VectorX<T> tau = VectorX<T>::Zero(nv);
   model_.CalcForceElementsContribution(
@@ -565,13 +565,13 @@ void CosseratRodPlant<T>::DoCalcTimeDerivatives(
   }
 #endif
 
-  PRINT_VAR(tau.transpose());
-  for (auto& F : Fapplied_Bo_W_array) {
-    PRINT_VAR(F);
-  }
-
-  VectorX<T> C(nv);
-  model_.CalcBiasTerm(context, pc, vc, Fapplied_Bo_W_array, &C);
+//  PRINT_VAR(tau.transpose());
+//  for (auto& F : Fapplied_Bo_W_array) {
+//    PRINT_VAR(F);
+//  }
+//
+//  VectorX<T> C(nv);
+//  model_.CalcBiasTerm(context, pc, vc, Fapplied_Bo_W_array, &C);
 
   // PRINT_VAR(C.transpose());
 
@@ -587,15 +587,15 @@ void CosseratRodPlant<T>::DoCalcTimeDerivatives(
   // mobilizers.
   //Eigen::LLT<MatrixX<T>> solver(M);
 
-  // TESTING
-  VectorX<T> vdot = VectorX<T>::Zero(nv);
-  model_.CalcForwardDynamics(
-      context, pc, vc, Fapplied_Bo_W_array, tau, &vdot
-  );
-  std::cout << (vdot - M.llt().solve(-C)).norm() << std::endl;
-  // TESTING
+//  VectorX<T> qddot = M.llt().solve(-C);
 
-  xdot << qdot, M.llt().solve(-C);
+  VectorX<T> qddot_aba = VectorX<T>::Zero(nv);
+  model_.CalcForwardDynamics(
+      context, pc, vc, Fapplied_Bo_W_array, tau, &qddot_aba
+  );
+//  std::cout << (qddot - qddot_aba).norm() / qddot.norm()  << std::endl;
+
+  xdot << qdot, qddot_aba;
   derivatives->SetFromVector(xdot);
 }
 
