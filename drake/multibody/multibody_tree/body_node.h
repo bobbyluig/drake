@@ -780,6 +780,8 @@ class BodyNode : public MultibodyTreeElement<BodyNode<T>, BodyNodeIndex> {
     if (tau_applied.size() != 0) tau -= tau_applied;
   }
 
+#define USE_JAIN_CORIOLIS false
+
   void CalcArticulatedKinematicsCache_TipToBase(
       const MultibodyTreeContext<T>& context,
       const PositionKinematicsCache<T>& pc,
@@ -886,6 +888,26 @@ class BodyNode : public MultibodyTreeElement<BodyNode<T>, BodyNodeIndex> {
     const SpatialAcceleration<T> A_PB_W =
         R_WF * A_FM.Shift(p_MoBo_F, V_FM.rotational());
 
+#if USE_JAIN_CORIOLIS
+    // Get V_WB.
+    const SpatialVelocity<T> V_WB = get_V_WB(vc);
+
+    // Get V_WP.
+    const SpatialVelocity<T> V_WP = get_V_WP(vc);
+
+    // Get V_FM and V_FM_W.
+    const SpatialVelocity<T> V_PB_W = get_V_PB_W(vc);
+
+    // Compute Aa_B_W, the coriolis acceleration, per [Jain, eq. 5.20b].
+    SpatialAcceleration<T> Aa_B_W = SpatialAcceleration<T>(
+        V_WB.rotational().cross(V_PB_W.rotational()),
+        V_WP.rotational().cross(V_WB.translational() - V_WP.translational()
+                                    + V_PB_W.translational())
+    );
+
+    // Add contribution from Hdot.
+    Aa_B_W.get_coeffs() += A_PB_W.get_coeffs();
+#else
     // Get V_WP.
     const SpatialVelocity<T>& V_WP = get_V_WP(vc);
 
@@ -899,6 +921,7 @@ class BodyNode : public MultibodyTreeElement<BodyNode<T>, BodyNodeIndex> {
     const SpatialAcceleration<T> Aa_B_W =
         A_zero.ComposeWithMovingFrameAcceleration(p_PoBo_W, V_WP.rotational(),
                                                   V_PB_W, A_PB_W);
+#endif
 
     // Cache Aa_B_W.
     bc.get_mutable_Aa_B_W(topology_.index) = Aa_B_W;
