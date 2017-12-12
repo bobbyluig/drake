@@ -844,18 +844,18 @@ class BodyNode : public MultibodyTreeElement<BodyNode<T>, BodyNodeIndex> {
         T_W * P_B_W.get_matrix()
     );
 
-    // Compute Fb_B_W, the gyroscopic force.
-    // This is equal to computing the spatial force under zero acceleration.
-    SpatialForce<T> Fb_B_W;
-    CalcBodySpatialForceGivenItsSpatialAcceleration(
-        context, pc, vc, SpatialAcceleration<T>(Vector6<T>::Zero()), &Fb_B_W
-    );
-
     // Define a few zero helper vectors.
     const VectorX<T> vmdot_zero =
         VectorX<T>::Zero(get_num_mobilizer_velocites());
     const SpatialAcceleration<T> A_zero =
         SpatialAcceleration<T>(Vector6<T>::Zero());
+
+    // Compute Fb_B_W, the gyroscopic force.
+    // This is equal to computing the spatial force under zero acceleration.
+    SpatialForce<T> Fb_B_W;
+    CalcBodySpatialForceGivenItsSpatialAcceleration(
+        context, pc, vc, A_zero, &Fb_B_W
+    );
 
     // Compute Aa_B_W, the coriolis acceleration.
     // Do this by first computing A_FM = Hdot_FM * vm.
