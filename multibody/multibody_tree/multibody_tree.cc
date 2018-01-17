@@ -390,6 +390,66 @@ void MultibodyTree<T>::CalcInverseDynamics(
 }
 
 template <typename T>
+void MultibodyTree<T>::CalcForwardDynamicsViaArticulatedBody(
+    const systems::Context<T>& context,
+    const PositionKinematicsCache<T>& pc,
+    const VelocityKinematicsCache<T>& vc,
+    const MultibodyForces<T>& forces,
+    EigenPtr<VectorX<T>> vdot
+) const {
+  DRAKE_DEMAND(vdot != nullptr);
+  DRAKE_DEMAND(vdot->size() == get_num_velocities());
+
+  const Eigen::Ref<const VectorX<T>>& generalized_forces =
+      forces.generalized_forces();
+  const std::vector<SpatialForce<T>>& body_forces = forces.body_forces();
+
+  VectorX<T> tau_applied_mobilizer;
+  SpatialForce<T> Fapplied_Bo_W;
+
+  const auto& mbt_context =
+      dynamic_cast<const MultibodyTreeContext<T>&>(context);
+
+  std::vector<Vector6<T>> H_PB_W_cache(
+      static_cast<unsigned long>(get_num_velocities()));
+  CalcAcrossNodeGeometricJacobianExpressedInWorld(context, pc, &H_PB_W_cache);
+
+  ArticulatedKinematicsCache<T> bc = ArticulatedKinematicsCache<T>(topology_);
+
+  for (int depth = get_tree_height() - 1; depth >= 1; depth--) {
+    for (BodyNodeIndex body_node_index : body_node_levels_[depth]) {
+      const BodyNode<T>& node = *body_nodes_[body_node_index];
+
+      tau_applied_mobilizer = node.get_mobilizer()
+            .get_generalized_forces_from_array(generalized_forces);
+      Fapplied_Bo_W = body_forces[body_node_index];
+
+      Eigen::Map<const MatrixUpTo6<T>> H_PB_W =
+          node.GetJacobianFromArray(H_PB_W_cache);
+
+      node.CalcArticulatedKinematicsCache_TipToBase(
+          mbt_context, pc, vc, H_PB_W, Fapplied_Bo_W, tau_applied_mobilizer, bc
+      );
+    }
+  }
+
+  AccelerationKinematicsCache<T> ac = AccelerationKinematicsCache<T>(topology_);
+
+  for (int depth = 1; depth < get_tree_height(); depth++) {
+    for (BodyNodeIndex body_node_index : body_node_levels_[depth]) {
+      const BodyNode<T>& node = *body_nodes_[body_node_index];
+
+      Eigen::Map<const MatrixUpTo6<T>> H_PB_W =
+          node.GetJacobianFromArray(H_PB_W_cache);
+
+      node.CalcForwardDynamics_BaseToTip(
+          mbt_context, pc, vc, H_PB_W, bc, ac, vdot
+      );
+    }
+  }
+}
+
+template <typename T>
 void MultibodyTree<T>::CalcForceElementsContribution(
     const systems::Context<T>& context,
     const PositionKinematicsCache<T>& pc,

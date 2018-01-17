@@ -11,6 +11,7 @@
 #include "drake/common/drake_copyable.h"
 #include "drake/common/drake_optional.h"
 #include "drake/multibody/multibody_tree/acceleration_kinematics_cache.h"
+#include "drake/multibody/multibody_tree/articulated_kinematics_cache.h"
 #include "drake/multibody/multibody_tree/body.h"
 #include "drake/multibody/multibody_tree/body_node.h"
 #include "drake/multibody/multibody_tree/force_element.h"
@@ -881,6 +882,56 @@ class MultibodyTree {
       std::vector<SpatialAcceleration<T>>* A_WB_array,
       std::vector<SpatialForce<T>>* F_BMo_W_array,
       EigenPtr<VectorX<T>> tau_array) const;
+
+  /// Given the state of `this` %MultibodyTree in `context`, a known vector of
+  /// applied spatial forces `Fapplied_Bo_W_array`, and a known vector of
+  /// applied generalized forces `tau_applied_array`, this method computes the
+  /// set of generalized accelerations `vdot` that result from the input forces
+  /// at each Mobilizer. Mathematically, this method computes: <pre>
+  ///   v̇ = M⁻¹(q) (-C(q, v)v + tau_app + ∑ J_WBᵀ(q) Fapp_Bo_W)
+  /// </pre>
+  /// where `M(q)` is the %MultibodyTree mass matrix, `C(q, v)v` is the bias
+  /// term containing Coriolis and gyroscopic effects, and `tau_app` is a vector
+  /// of applied generalized forces. The last term is a summation over all
+  /// bodies in the model where `Fapp_Bo_W` is an applied spatial force on body
+  /// B at `Bo` which gets projected into the space of generalized forces with
+  /// the geometric Jacobian `J_WB(q)` which maps generalized velocities into
+  /// body B spatial velocity as `V_WB = J_WB(q)v`.
+  /// This method does not compute explicit expressions for the mass matrix nor
+  /// for the bias term. Instead, it implements an `O(n)` Articulated Body
+  /// recursive algorithm, where n is the number of bodies in the
+  /// %MultibodyTree. Explicitly forming the term `M⁻¹(q)` requires at least
+  /// `O(n³)` operations. The Articulated Body algorithm is the most efficient
+  /// currently known general method for solving forward dynamics [Featherstone
+  /// 2008].
+  ///
+  /// @param[in] context
+  ///   The context containing the state of the %MultibodyTree model.
+  /// @param[in] pc
+  ///   A position kinematics cache object already updated to be in sync with
+  ///   `context`.
+  /// @param[in] vc
+  ///   A velocity kinematics cache object already updated to be in sync with
+  ///   `context`.
+  /// @param[in] forces
+  ///   A multibody forces object, containing both forces per body and
+  ///   generalized forces. The output of CalcForceElementsContribution() can
+  ///   be used directly as an input to this method.
+  /// @param[out] vdot
+  ///   A vector with the known generalized accelerations `vdot` for the full
+  ///   %MultibodyTree model. Use Mobilizer::get_accelerations_from_array() to
+  ///   access entries into this array for a particular Mobilizer.
+  ///
+  /// @pre The position kinematics `pc` must have been previously updated with a
+  /// call to CalcPositionKinematicsCache().
+  /// @pre The velocity kinematics `vc` must have been previously updated with a
+  /// call to CalcVelocityKinematicsCache().
+  void CalcForwardDynamicsViaArticulatedBody(
+      const systems::Context<T>& context,
+      const PositionKinematicsCache<T>& pc,
+      const VelocityKinematicsCache<T>& vc,
+      const MultibodyForces<T>& forces,
+      EigenPtr<VectorX<T>> vdot) const;
 
   /// Computes the combined force contribution of ForceElement objects in the
   /// model. A ForceElement can apply forces as a spatial force per body or as

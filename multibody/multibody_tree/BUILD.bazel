@@ -35,17 +35,20 @@ drake_cc_library(
     name = "multibody_tree_context",
     srcs = [
         "acceleration_kinematics_cache.cc",
+        "articulated_kinematics_cache.cc",
         "multibody_tree_context.cc",
         "position_kinematics_cache.cc",
         "velocity_kinematics_cache.cc",
     ],
     hdrs = [
         "acceleration_kinematics_cache.h",
+        "articulated_kinematics_cache.h",
         "multibody_tree_context.h",
         "position_kinematics_cache.h",
         "velocity_kinematics_cache.h",
     ],
     deps = [
+        ":articulated_body_inertia",
         ":multibody_tree_topology",
         "//drake/common:autodiff",
         "//drake/multibody/multibody_tree/math:spatial_acceleration",
@@ -142,6 +145,16 @@ drake_cc_library(
     hdrs = ["unit_inertia.h"],
     deps = [
         ":rotational_inertia",
+    ],
+)
+
+drake_cc_library(
+    name = "articulated_body_inertia",
+    srcs = ["articulated_body_inertia.cc"],
+    hdrs = ["articulated_body_inertia.h"],
+    deps = [
+        ":spatial_inertia",
+        "//drake/multibody/multibody_tree/math:spatial_algebra",
     ],
 )
 
@@ -244,6 +257,39 @@ drake_cc_googletest(
     name = "rigid_body_test",
     deps = [
         ":multibody_tree",
+    ],
+)
+
+drake_cc_googletest(
+    name = "articulated_body_inertia_test",
+    deps = [
+        ":articulated_body_inertia",
+        ":multibody_tree",
+        ":spatial_inertia",
+    ],
+)
+
+drake_cc_library(
+    name = "double_pendulum_3d_plant",
+    srcs = ["test/double_pendulum_3d_plant.cc"],
+    hdrs = ["test/double_pendulum_3d_plant.h"],
+    deps = [
+        "//drake/common:default_scalars",
+        "//drake/geometry:geometry_ids",
+        "//drake/geometry:geometry_system",
+        "//drake/math:geometric_transform",
+        "//drake/multibody/multibody_tree",
+        "//drake/systems/framework",
+        "//drake/systems/framework:leaf_system",
+    ],
+)
+
+drake_cc_googletest(
+    name = "double_pendulum_3d_test",
+    deps = [
+        ":double_pendulum_3d_plant",
+        "//drake/common/test_utilities:eigen_matrix_compare",
+        "//drake/systems/analysis:simulator",
     ],
 )
 
