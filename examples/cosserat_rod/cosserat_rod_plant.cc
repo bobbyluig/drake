@@ -28,15 +28,6 @@ using Eigen::Translation3d;
 using Eigen::Vector3d;
 using multibody::SpatialForce;
 
-#include <iostream>
-//#define PRINT_VAR(a) std::cout << #a": " << a << std::endl;
-//#define PRINT_VARn(a) std::cout << #a":\n" << a << std::endl;
-
-#define PRINT_VAR(a) (void)a;
-#define PRINT_VARn(a) (void)a;
-
-#define PRINT_VAR2(a) std::cout << #a": " << a << std::endl;
-
 using namespace multibody;
 
 template <typename T>
@@ -45,7 +36,8 @@ CosseratRodPlant<T>::CosseratRodPlant(
     double rho,
     double young_modulus, double shear_modulus,
     double tau_bending, double tau_twisting,
-    int num_links, int dimension) :
+    int num_links, int dimension,
+    std::vector<ForceElement<T>*> force_elements) :
     dimension_(dimension),
     length_(length),
     rho_(rho),
@@ -90,9 +82,6 @@ CosseratRodPlant<T>::CosseratRodPlant(
   DRAKE_DEMAND(model_.get_num_positions() == nq * num_links);
   DRAKE_DEMAND(model_.get_num_velocities() == nv * num_links);
   DRAKE_DEMAND(model_.get_num_states() == nx * num_links);
-
-  PRINT_VAR(model_.get_num_positions());
-  PRINT_VAR(model_.get_num_velocities());
 
   //this->DeclareInputPort(systems::kVectorValued, 1);
   state_output_port_index_ = this->DeclareVectorOutputPort(
@@ -177,79 +166,8 @@ void CosseratRodPlant<T>::CalcElementPosesOutput(
     X_DW.linear() =
         Eigen::AngleAxis<T>(M_PI, Vector3<T>::UnitX()).toRotationMatrix();
     bundle->set_pose(element_index, X_DW*pc.get_X_WB(node_index));
-    PRINT_VAR(element_index);
-    PRINT_VARn(pc.get_X_WB(node_index).matrix());
   }
-
-  // Poke arrow pose.
-  int element_poke_index;
-  T y_poke = -0.35;
-  T z_poke = 0.35;
-  {
-    const T time = context.get_time();
-    //const T s_poke = 0.5 * length_;
-    element_poke_index = (num_elements_ / 2);
-    if ( time > 2.9 && time < 3.2) {
-      if( time < 3.05)
-        y_poke = -0.35 + 0.35 * (time - 2.9) / 0.15;
-      else
-        y_poke = -0.35 * (time - 3.05) / 0.15;
-    }
-
-    if (time > 4.0 && time < 5.0) {
-      z_poke = 0.35 + (time - 4.0) * 0.3;
-      y_poke = -0.35 + (time - 4.0) * 0.7;
-    }
-    if (time > 5.0) {
-      z_poke = 0.65;
-      y_poke = 0.35;
-    }
-
-    if ( time > 5.9 && time < 6.2) {
-      if( time < 6.05)
-        y_poke = 0.35 - 0.35 * (time - 5.9) / 0.15;
-      else
-        y_poke = 0.35 * (time - 6.05) / 0.15;
-    }
-  }
-  const Isometry3<T> X_WB = pc.get_X_WB(BodyNodeIndex(element_poke_index));
-
-  const int element_index = model_.get_num_bodies() - 1;
-  bundle->set_model_instance_id(element_index, instance_id);
-  bundle->set_name(element_index, "poke");
-  Isometry3<T> X_DW = Isometry3<T>::Identity();
-  X_DW.linear() =
-      Eigen::AngleAxis<T>(M_PI, Vector3<T>::UnitX()).toRotationMatrix();
-
-  Isometry3<T> X_G = Isometry3<T>::Identity();
-  X_G.linear() =
-      Eigen::AngleAxis<T>(M_PI / 2.0, Vector3<T>::UnitX()).toRotationMatrix();
-
-  bundle->set_pose(element_index,
-                   Translation3<T>(Vector3<T>::UnitY() * y_poke) *
-                       X_DW *
-                       Translation3<T>(Vector3<T>(0.0, 0.0, z_poke)) * X_G);
-
-  //Translation3<T>(X_WB.translation())
 }
-
-#if 0
-template <typename T>
-template <typename U>
-CosseratRodPlant<T>::CosseratRodPlant(
-    const CosseratRodPlant<U>& other) : CosseratRodPlant<T>(
-          other.length_,
-          other.m2(),
-          other.l1(),
-          other.l2(),
-          other.lc1(),
-          other.lc2(),
-          other.Ic1(),
-          other.Ic2(),
-          other.b1(),
-          other.b2(),
-          other.g()) {}
-#endif
 
 template <typename T>
 const RigidBody<T>& CosseratRodPlant<T>::AddElement(
@@ -446,24 +364,13 @@ void CosseratRodPlant<T>::DoCalcTimeDerivatives(
   const int nq = model_.get_num_positions();
   const int nv = model_.get_num_velocities();
 
-  PRINT_VAR("CosseratRodPlant<T>::DoCalcTimeDerivatives");
-  PRINT_VAR("CosseratRodPlant<T>::DoCalcTimeDerivatives");
-
   PositionKinematicsCache<T> pc(model_.get_topology());
   VelocityKinematicsCache<T> vc(model_.get_topology());
   model_.CalcPositionKinematicsCache(context, &pc);
   model_.CalcVelocityKinematicsCache(context, pc, &vc);
 
-  PRINT_VAR(last_element_->get_node_index());
-
   MatrixX<T> M(nv, nv);
   model_.CalcMassMatrixViaInverseDynamics(context, &M);
-  // Check if M is symmetric.
-  const T err_sym = (M - M.transpose()).norm();
-  PRINT_VAR(err_sym);
-  //DRAKE_DEMAND(err_sym < 1.0e-6);
-
-  PRINT_VARn(M);
 
   MultibodyForces<T> forces = MultibodyForces<T>(model_);
   model_.CalcForceElementsContribution(context, pc, vc, &forces);
@@ -471,104 +378,8 @@ void CosseratRodPlant<T>::DoCalcTimeDerivatives(
   VectorX<T>& tau = forces.mutable_generalized_forces();
   std::vector<SpatialForce<T>>& Fapplied_Bo_W_array =
       forces.mutable_body_forces();
-#if 0
-
-  // Add a constant moment at the end link.
-  const T M0 = 0.005;  // Torque in Nm
-  SpatialForce<T> M_B(Vector3<T>(0.0, 0.0, M0), Vector3<T>::Zero());
-  const Matrix3<T> R_WB = pc.get_X_WB(last_element_->get_node_index()).linear();
-  Fapplied_Bo_W_array[last_element_->get_node_index()] += R_WB * M_B;
-
-  const Vector3<T> p_WB =
-      pc.get_X_WB(last_element_->get_node_index()).translation();
-  const Vector3<T> p0_WB = Vector3<T>(0.0, 0.0, length_);
-  const T k_spring = 100;  // N/m
-  Vector3<T> fspring_W = -k_spring * (p_WB - p0_WB);
-  fspring_W(2) = 0.008; // a constant pull in z.
-  Fapplied_Bo_W_array[last_element_->get_node_index()] +=
-      SpatialForce<T>(Vector3<T>::Zero(), fspring_W);
-  //const T f0 = 0.010;
-  //SpatialForce<T> F_W(Vector3<T>::Zero(), Vector3<T>(0.0, 0.0, -f0));
-  //Fapplied_Bo_W_array[last_element_->get_node_index()] += F_W;
-
-#endif
-
-#if 1
-  // Apply a poke in the middle
-  {
-    //const double rad2deg = 180.0 / M_PI;
-
-    const T time = context.get_time();
-    //PRINT_VAR2(context.get_time());
-    //const T s_poke = 0.5 * length_;
-    const BodyNodeIndex mid_element(num_elements_ / 2);
-    const double f_poke = 300.0;  // [N]
-
-    //const Vector3<T> x_WB =
-    //    pc.get_X_WB(mid_element).translation();
-    //const Matrix3<T> R_WB =
-    //    pc.get_X_WB(mid_element).linear();
-
-    //Vector3<T> x_poke = x_WB + R_WB.col(1) * 0.035;
-
-#if 0
-    bot_lcmgl_push_matrix(lcmgl);
-    {
-      bot_lcmgl_color3f(lcmgl, 1.0, 0.0, 0.0);
-      bot_lcmgl_rotated(lcmgl, rad2deg * M_PI, 1.0, 0.0, 0.0);
-      bot_lcmgl_sphere(lcmgl, x_poke.data(), 0.007 /*radius*/,
-                       20 /*slices*/, 20 /* stacks*/);
-    }
-    bot_lcmgl_pop_matrix(lcmgl);
-#endif
-
-    if ( time > 3.0 && time < 3.1) {
-      SpatialForce<T> F_poke(
-          Vector3<T>::Zero(),
-          -f_poke * Vector3<T>::UnitY());
-      Fapplied_Bo_W_array[mid_element] += F_poke;
-
-//      bot_lcmgl_push_matrix(lcmgl);
-//      {
-//        const double arrow_length = f_poke / 3000.0;
-//        const double head_length = arrow_length / 5.0;
-//        const double head_width = head_length / 4.0;
-//        const double body_width = head_width / 2.0;
-//        // X_VW * X_WA
-//        // Rotate to drake's visualizer view frame X_VW
-//        bot_lcmgl_rotated(lcmgl, rad2deg * M_PI, 1.0, 0.0, 0.0);
-//        // Translate a bit out, in the model's world frame.
-//        bot_lcmgl_translated(lcmgl, 0.0, arrow_length/2.0, 0.0);
-//        // Translate to the application point, in model's world frame.
-//        bot_lcmgl_translated(lcmgl, x_poke[0], x_poke[1], x_poke[2]);
-//        // Rotate arrow's direction (x-axis) to be model's minus y-axis
-//        bot_lcmgl_rotated(lcmgl, -rad2deg * M_PI / 2, 0.0, 0.0, 1.0);
-//        bot_lcmgl_color3f(lcmgl, 1.0, 0.0, 0.0);
-//        bot_lcmgl_draw_arrow_3d(
-//            lcmgl, arrow_length, head_width, head_length, body_width);
-//      }
-//      bot_lcmgl_pop_matrix(lcmgl);
-    }
-
-    if ( time > 6.0 && time < 6.1) {
-      const BodyNodeIndex last_element(num_elements_);
-      SpatialForce<T> F_poke(
-          Vector3<T>::Zero(),
-          -f_poke /2.0 * Vector3<T>::UnitY());
-      Fapplied_Bo_W_array[last_element] -= F_poke;
-    }
-
-    //bot_lcmgl_switch_buffer(lcmgl); // This effectively publishes.
-  }
-#endif
-
-  PRINT_VAR(tau.transpose());
-  for (auto& F : Fapplied_Bo_W_array) {
-    PRINT_VAR(F);
-  }
 
   VectorX<T> C(nv);
-  //model_.CalcBiasTerm(context, pc, vc, Fapplied_Bo_W_array, &C);
 
   const VectorX<T> vdot = VectorX<T>::Zero(model_.get_num_velocities());
   std::vector<SpatialAcceleration<T>> A_WB_array(model_.get_num_bodies());
@@ -577,19 +388,12 @@ void CosseratRodPlant<T>::DoCalcTimeDerivatives(
       context, pc, vc, vdot, Fapplied_Bo_W_array, tau,
       &A_WB_array, &F_BMo_W_array, &C);
 
-  PRINT_VAR(C.transpose());
-
   auto v = x.bottomRows(nv);
 
   VectorX<T> qdot(nq);
   model_.MapVelocityToQDot(context, v, &qdot);
 
   VectorX<T> xdot(model_.get_num_states());
-
-  // TODO: this solve M.llt().solve() does not seem to throw an error when M is
-  // not symmetric. Apparently my M is not symmetric when I add those ball
-  // mobilizers.
-  //Eigen::LLT<MatrixX<T>> solver(M);
 
   xdot << qdot, M.llt().solve(- C);
   derivatives->SetFromVector(xdot);
@@ -799,6 +603,12 @@ double CosseratRodPlant<T>::EstimateTau(double timeConstant, double zeta) {
   // Then to overdamp the beam we take tau_d = 2 * zeta / w0 :
   double tau_d = 2 * zeta * timeConstant / (2 * M_PI);
   return tau_d;
+}
+
+template <typename T>
+void CosseratRodPlant<T>::AddForceElement(
+    std::unique_ptr<ForceElement<T>> force_element) {
+  model_.AddForceElement(std::move(force_element));
 }
 
 template class CosseratRodPlant<double>;

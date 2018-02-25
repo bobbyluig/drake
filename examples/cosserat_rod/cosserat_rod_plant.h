@@ -68,6 +68,9 @@ class CosseratRodPlant : public systems::LeafSystem<T> {
     return *poses_output_port_;
   }
 
+  void AddForceElement(
+      std::unique_ptr<multibody::ForceElement<T>> force_element);
+
   ~CosseratRodPlant() {
   }
 

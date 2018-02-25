@@ -21,8 +21,6 @@ drake_cc_library(
         "rod_element.h",
     ],
     deps = [
-        "//drake/lcm",
-        "//drake/lcmtypes:viewer",
         "//drake/multibody/multibody_tree",
     ],
 )
